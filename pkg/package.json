@@ -1,0 +1,16 @@
+{
+  "name": "gamebaby",
+  "type": "module",
+  "description": "",
+  "version": "0.1.0",
+  "files": [
+    "gblib_bg.wasm",
+    "gblib.js",
+    "gblib.d.ts"
+  ],
+  "main": "gblib.js",
+  "types": "gblib.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
