@@ -34,10 +34,10 @@ main()
 {
     loop
     {
-        if INPUT_REG.byte&   UP_KEY{VIDEO_REG.word -= VIDEO_W;}
+        if INPUT_REG.byte&   UP_KEY{VIDEO_REG.word -= 3*VIDEO_W;}
         if INPUT_REG.byte& LEFT_KEY{VIDEO_REG.word -= 1;}
         if INPUT_REG.byte&RIGHT_KEY{VIDEO_REG.word += 1;}
-        if INPUT_REG.byte& DOWN_KEY{VIDEO_REG.word += VIDEO_W;}
+        if INPUT_REG.byte& DOWN_KEY{VIDEO_REG.word += 3*VIDEO_W;}
 
       halt;
     }
