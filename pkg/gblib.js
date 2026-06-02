@@ -1,6 +1,13 @@
 /* @ts-self-types="./gblib.d.ts" */
 
 /**
+ * @param {number} v
+ */
+export function add_time(v) {
+    wasm.add_time(v);
+}
+
+/**
  * @returns {number}
  */
 export function get_audio_freq() {
@@ -11,9 +18,9 @@ export function get_audio_freq() {
 /**
  * @returns {number}
  */
-export function get_audio_volume() {
-    const ret = wasm.get_audio_volume();
-    return ret;
+export function get_audio_vol() {
+    const ret = wasm.get_audio_vol();
+    return ret >>> 0;
 }
 
 /**
@@ -32,6 +39,14 @@ export function get_height() {
 export function get_pixel(x, y) {
     const ret = wasm.get_pixel(x, y);
     return ret >>> 0;
+}
+
+/**
+ * @returns {number}
+ */
+export function get_report() {
+    const ret = wasm.get_report();
+    return ret;
 }
 
 /**
@@ -68,13 +83,18 @@ export function set_input_up() {
 
 /**
  * @param {string} s
- * @returns {boolean}
+ * @returns {string | undefined}
  */
 export function setup(s) {
     const ptr0 = passStringToWasm0(s, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     const ret = wasm.setup(ptr0, len0);
-    return ret !== 0;
+    let v2;
+    if (ret[0] !== 0) {
+        v2 = getStringFromWasm0(ret[0], ret[1]).slice();
+        wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    }
+    return v2;
 }
 
 export function unset_input_down() {
@@ -113,6 +133,10 @@ function __wbg_get_imports() {
         __proto__: null,
         "./gblib_bg.js": import0,
     };
+}
+
+function getStringFromWasm0(ptr, len) {
+    return decodeText(ptr >>> 0, len);
 }
 
 let cachedUint8ArrayMemory0 = null;
@@ -158,6 +182,20 @@ function passStringToWasm0(arg, malloc, realloc) {
 
     WASM_VECTOR_LEN = offset;
     return ptr;
+}
+
+let cachedTextDecoder = new TextDecoder('utf-8', { ignoreBOM: true, fatal: true });
+cachedTextDecoder.decode();
+const MAX_SAFARI_DECODE_BYTES = 2146435072;
+let numBytesDecoded = 0;
+function decodeText(ptr, len) {
+    numBytesDecoded += len;
+    if (numBytesDecoded >= MAX_SAFARI_DECODE_BYTES) {
+        cachedTextDecoder = new TextDecoder('utf-8', { ignoreBOM: true, fatal: true });
+        cachedTextDecoder.decode();
+        numBytesDecoded = len;
+    }
+    return cachedTextDecoder.decode(getUint8ArrayMemory0().subarray(ptr, ptr + len));
 }
 
 const cachedTextEncoder = new TextEncoder();

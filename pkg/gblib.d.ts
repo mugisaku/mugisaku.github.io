@@ -1,13 +1,17 @@
 /* tslint:disable */
 /* eslint-disable */
 
+export function add_time(v: number): void;
+
 export function get_audio_freq(): number;
 
-export function get_audio_volume(): number;
+export function get_audio_vol(): number;
 
 export function get_height(): number;
 
 export function get_pixel(x: number, y: number): number;
+
+export function get_report(): number;
 
 export function get_width(): number;
 
@@ -23,7 +27,7 @@ export function set_input_right(): void;
 
 export function set_input_up(): void;
 
-export function setup(s: string): boolean;
+export function setup(s: string): string | undefined;
 
 export function unset_input_down(): void;
 
@@ -42,8 +46,10 @@ export interface InitOutput {
     readonly get_width: () => number;
     readonly get_height: () => number;
     readonly get_pixel: (a: number, b: number) => number;
+    readonly add_time: (a: number) => void;
     readonly get_audio_freq: () => number;
-    readonly get_audio_volume: () => number;
+    readonly get_audio_vol: () => number;
+    readonly get_report: () => number;
     readonly set_input_up: () => void;
     readonly unset_input_up: () => void;
     readonly set_input_left: () => void;
@@ -55,10 +61,11 @@ export interface InitOutput {
     readonly set_input_enter: () => void;
     readonly unset_input_enter: () => void;
     readonly process: () => void;
-    readonly setup: (a: number, b: number) => number;
+    readonly setup: (a: number, b: number) => [number, number];
     readonly __wbindgen_externrefs: WebAssembly.Table;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
+    readonly __wbindgen_free: (a: number, b: number, c: number) => void;
     readonly __wbindgen_start: () => void;
 }
 
