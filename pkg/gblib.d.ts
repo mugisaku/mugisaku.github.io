@@ -1,67 +1,37 @@
 /* tslint:disable */
 /* eslint-disable */
 
-export function add_time(v: number): void;
+export function get_byte(off: number): number;
 
-export function get_audio_freq(): number;
+export function get_const(s: string): number;
 
-export function get_audio_vol(): number;
+export function get_info(): number;
 
-export function get_height(): number;
+export function get_io(s: string): number;
 
-export function get_pixel(x: number, y: number): number;
-
-export function get_report(): number;
-
-export function get_width(): number;
+export function get_word(off: number): number;
 
 export function process(): void;
 
-export function set_input_down(): void;
+export function put_byte(off: number, v: number): void;
 
-export function set_input_enter(): void;
+export function put_word(off: number, v: number): void;
 
-export function set_input_left(): void;
-
-export function set_input_right(): void;
-
-export function set_input_up(): void;
-
-export function setup(s: string): string | undefined;
-
-export function unset_input_down(): void;
-
-export function unset_input_enter(): void;
-
-export function unset_input_left(): void;
-
-export function unset_input_right(): void;
-
-export function unset_input_up(): void;
+export function setup(s: string, memsz: number, freq: number): string | undefined;
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
-    readonly get_width: () => number;
-    readonly get_height: () => number;
-    readonly get_pixel: (a: number, b: number) => number;
-    readonly add_time: (a: number) => void;
-    readonly get_audio_freq: () => number;
-    readonly get_audio_vol: () => number;
-    readonly get_report: () => number;
-    readonly set_input_up: () => void;
-    readonly unset_input_up: () => void;
-    readonly set_input_left: () => void;
-    readonly unset_input_left: () => void;
-    readonly set_input_right: () => void;
-    readonly unset_input_right: () => void;
-    readonly set_input_down: () => void;
-    readonly unset_input_down: () => void;
-    readonly set_input_enter: () => void;
-    readonly unset_input_enter: () => void;
+    readonly get_byte: (a: number) => number;
+    readonly put_byte: (a: number, b: number) => void;
+    readonly get_word: (a: number) => number;
+    readonly put_word: (a: number, b: number) => void;
+    readonly get_io: (a: number, b: number) => number;
+    readonly get_const: (a: number, b: number) => number;
+    readonly get_info: () => number;
     readonly process: () => void;
-    readonly setup: (a: number, b: number) => [number, number];
+    readonly setup: (a: number, b: number, c: number, d: number) => [number, number];
     readonly __wbindgen_externrefs: WebAssembly.Table;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;

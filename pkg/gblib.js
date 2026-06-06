@@ -1,59 +1,50 @@
 /* @ts-self-types="./gblib.d.ts" */
 
 /**
- * @param {number} v
- */
-export function add_time(v) {
-    wasm.add_time(v);
-}
-
-/**
+ * @param {number} off
  * @returns {number}
  */
-export function get_audio_freq() {
-    const ret = wasm.get_audio_freq();
+export function get_byte(off) {
+    const ret = wasm.get_byte(off);
     return ret;
 }
 
 /**
+ * @param {string} s
  * @returns {number}
  */
-export function get_audio_vol() {
-    const ret = wasm.get_audio_vol();
+export function get_const(s) {
+    const ptr0 = passStringToWasm0(s, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.get_const(ptr0, len0);
     return ret >>> 0;
 }
 
 /**
  * @returns {number}
  */
-export function get_height() {
-    const ret = wasm.get_height();
+export function get_info() {
+    const ret = wasm.get_info();
     return ret >>> 0;
 }
 
 /**
- * @param {number} x
- * @param {number} y
+ * @param {string} s
  * @returns {number}
  */
-export function get_pixel(x, y) {
-    const ret = wasm.get_pixel(x, y);
+export function get_io(s) {
+    const ptr0 = passStringToWasm0(s, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.get_io(ptr0, len0);
     return ret >>> 0;
 }
 
 /**
+ * @param {number} off
  * @returns {number}
  */
-export function get_report() {
-    const ret = wasm.get_report();
-    return ret;
-}
-
-/**
- * @returns {number}
- */
-export function get_width() {
-    const ret = wasm.get_width();
+export function get_word(off) {
+    const ret = wasm.get_word(off);
     return ret >>> 0;
 }
 
@@ -61,60 +52,38 @@ export function process() {
     wasm.process();
 }
 
-export function set_input_down() {
-    wasm.set_input_down();
+/**
+ * @param {number} off
+ * @param {number} v
+ */
+export function put_byte(off, v) {
+    wasm.put_byte(off, v);
 }
 
-export function set_input_enter() {
-    wasm.set_input_enter();
-}
-
-export function set_input_left() {
-    wasm.set_input_left();
-}
-
-export function set_input_right() {
-    wasm.set_input_right();
-}
-
-export function set_input_up() {
-    wasm.set_input_up();
+/**
+ * @param {number} off
+ * @param {number} v
+ */
+export function put_word(off, v) {
+    wasm.put_word(off, v);
 }
 
 /**
  * @param {string} s
+ * @param {number} memsz
+ * @param {number} freq
  * @returns {string | undefined}
  */
-export function setup(s) {
+export function setup(s, memsz, freq) {
     const ptr0 = passStringToWasm0(s, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.setup(ptr0, len0);
+    const ret = wasm.setup(ptr0, len0, memsz, freq);
     let v2;
     if (ret[0] !== 0) {
         v2 = getStringFromWasm0(ret[0], ret[1]).slice();
         wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
     }
     return v2;
-}
-
-export function unset_input_down() {
-    wasm.unset_input_down();
-}
-
-export function unset_input_enter() {
-    wasm.unset_input_enter();
-}
-
-export function unset_input_left() {
-    wasm.unset_input_left();
-}
-
-export function unset_input_right() {
-    wasm.unset_input_right();
-}
-
-export function unset_input_up() {
-    wasm.unset_input_up();
 }
 function __wbg_get_imports() {
     const import0 = {
