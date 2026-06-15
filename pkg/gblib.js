@@ -21,14 +21,6 @@ export function get_const(s) {
 }
 
 /**
- * @returns {number}
- */
-export function get_info() {
-    const ret = wasm.get_info();
-    return ret >>> 0;
-}
-
-/**
  * @param {string} s
  * @returns {number}
  */
@@ -70,14 +62,13 @@ export function put_word(off, v) {
 
 /**
  * @param {string} s
- * @param {number} memsz
  * @param {number} freq
  * @returns {string | undefined}
  */
-export function setup(s, memsz, freq) {
+export function setup(s, freq) {
     const ptr0 = passStringToWasm0(s, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.setup(ptr0, len0, memsz, freq);
+    const ret = wasm.setup(ptr0, len0, freq);
     let v2;
     if (ret[0] !== 0) {
         v2 = getStringFromWasm0(ret[0], ret[1]).slice();

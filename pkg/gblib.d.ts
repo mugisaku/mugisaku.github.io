@@ -5,8 +5,6 @@ export function get_byte(off: number): number;
 
 export function get_const(s: string): number;
 
-export function get_info(): number;
-
 export function get_io(s: string): number;
 
 export function get_word(off: number): number;
@@ -17,7 +15,7 @@ export function put_byte(off: number, v: number): void;
 
 export function put_word(off: number, v: number): void;
 
-export function setup(s: string, memsz: number, freq: number): string | undefined;
+export function setup(s: string, freq: number): string | undefined;
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
@@ -29,9 +27,8 @@ export interface InitOutput {
     readonly put_word: (a: number, b: number) => void;
     readonly get_io: (a: number, b: number) => number;
     readonly get_const: (a: number, b: number) => number;
-    readonly get_info: () => number;
     readonly process: () => void;
-    readonly setup: (a: number, b: number, c: number, d: number) => [number, number];
+    readonly setup: (a: number, b: number, c: number) => [number, number];
     readonly __wbindgen_externrefs: WebAssembly.Table;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
