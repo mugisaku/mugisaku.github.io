@@ -1,6 +1,28 @@
 /* @ts-self-types="./gblib.d.ts" */
 
 /**
+ * @param {number} w
+ * @param {number} h
+ * @param {Uint8Array} data
+ */
+export function add_img(w, h, data) {
+    const ptr0 = passArray8ToWasm0(data, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    wasm.add_img(w, h, ptr0, len0);
+}
+
+/**
+ * @param {string} s
+ * @returns {boolean}
+ */
+export function build(s) {
+    const ptr0 = passStringToWasm0(s, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.build(ptr0, len0);
+    return ret !== 0;
+}
+
+/**
  * @param {number} off
  * @returns {number}
  */
@@ -61,20 +83,17 @@ export function put_word(off, v) {
 }
 
 /**
- * @param {string} s
  * @param {number} freq
  * @returns {string | undefined}
  */
-export function setup(s, freq) {
-    const ptr0 = passStringToWasm0(s, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.setup(ptr0, len0, freq);
-    let v2;
+export function setup(freq) {
+    const ret = wasm.setup(freq);
+    let v1;
     if (ret[0] !== 0) {
-        v2 = getStringFromWasm0(ret[0], ret[1]).slice();
+        v1 = getStringFromWasm0(ret[0], ret[1]).slice();
         wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
     }
-    return v2;
+    return v1;
 }
 function __wbg_get_imports() {
     const import0 = {
@@ -105,6 +124,13 @@ function getUint8ArrayMemory0() {
         cachedUint8ArrayMemory0 = new Uint8Array(wasm.memory.buffer);
     }
     return cachedUint8ArrayMemory0;
+}
+
+function passArray8ToWasm0(arg, malloc) {
+    const ptr = malloc(arg.length * 1, 1) >>> 0;
+    getUint8ArrayMemory0().set(arg, ptr / 1);
+    WASM_VECTOR_LEN = arg.length;
+    return ptr;
 }
 
 function passStringToWasm0(arg, malloc, realloc) {

@@ -1,6 +1,10 @@
 /* tslint:disable */
 /* eslint-disable */
 
+export function add_img(w: number, h: number, data: Uint8Array): void;
+
+export function build(s: string): boolean;
+
 export function get_byte(off: number): number;
 
 export function get_const(s: string): number;
@@ -15,7 +19,7 @@ export function put_byte(off: number, v: number): void;
 
 export function put_word(off: number, v: number): void;
 
-export function setup(s: string, freq: number): string | undefined;
+export function setup(freq: number): string | undefined;
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
@@ -28,7 +32,9 @@ export interface InitOutput {
     readonly get_io: (a: number, b: number) => number;
     readonly get_const: (a: number, b: number) => number;
     readonly process: () => void;
-    readonly setup: (a: number, b: number, c: number) => [number, number];
+    readonly build: (a: number, b: number) => number;
+    readonly add_img: (a: number, b: number, c: number, d: number) => void;
+    readonly setup: (a: number) => [number, number];
     readonly __wbindgen_externrefs: WebAssembly.Table;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
