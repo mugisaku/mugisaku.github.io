@@ -15,10 +15,10 @@ export function add_img(w, h, data) {
  * @param {string} s
  * @returns {boolean}
  */
-export function build(s) {
+export function compile(s) {
     const ptr0 = passStringToWasm0(s, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.build(ptr0, len0);
+    const ret = wasm.compile(ptr0, len0);
     return ret !== 0;
 }
 
@@ -40,6 +40,22 @@ export function get_const(s) {
     const len0 = WASM_VECTOR_LEN;
     const ret = wasm.get_const(ptr0, len0);
     return ret >>> 0;
+}
+
+/**
+ * @returns {string}
+ */
+export function get_error_message() {
+    let deferred1_0;
+    let deferred1_1;
+    try {
+        const ret = wasm.get_error_message();
+        deferred1_0 = ret[0];
+        deferred1_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+    }
 }
 
 /**

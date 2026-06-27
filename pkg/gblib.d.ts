@@ -3,11 +3,13 @@
 
 export function add_img(w: number, h: number, data: Uint8Array): void;
 
-export function build(s: string): boolean;
+export function compile(s: string): boolean;
 
 export function get_byte(off: number): number;
 
 export function get_const(s: string): number;
+
+export function get_error_message(): string;
 
 export function get_io(s: string): number;
 
@@ -32,7 +34,8 @@ export interface InitOutput {
     readonly get_io: (a: number, b: number) => number;
     readonly get_const: (a: number, b: number) => number;
     readonly process: () => void;
-    readonly build: (a: number, b: number) => number;
+    readonly get_error_message: () => [number, number];
+    readonly compile: (a: number, b: number) => number;
     readonly add_img: (a: number, b: number, c: number, d: number) => void;
     readonly setup: (a: number) => [number, number];
     readonly __wbindgen_externrefs: WebAssembly.Table;
