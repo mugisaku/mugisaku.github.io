@@ -57,23 +57,21 @@
     </span>
   <span>
     <textarea id="text" cols="48" rows="12">
-io input;
-io video;
-io time;
+static video;
 
-io sin_freq;
-io sin_vol ;
-io squ_freq;
-io squ_vol ;
-io saw_freq;
-io saw_vol ;
-io tri_freq;
-io tri_vol ;
-io noi_vol ;
+static sin_freq;
+static sin_vol ;
+static squ_freq;
+static squ_vol ;
+static saw_freq;
+static saw_vol ;
+static tri_freq;
+static tri_vol ;
+static noi_vol ;
 
-io report;
+static report;
 
-field video_field 4*VIDEO_W*VIDEO_H;
+static video_field[4*VIDEO_W*VIDEO_H];
 
 const VIDEO_W = 400;
 const VIDEO_H = 200;
@@ -101,11 +99,11 @@ const  CHR_H = 40;
 fn
 sleep(tm)
 {
-  var  base = time;
+  var  base = sys.timer();
 
     loop
     {
-        if (time-base) >= tm
+        if (sys.timer()-base) >= tm
         {
           break;
         }
@@ -119,7 +117,7 @@ sleep(tm)
 fn
 dot(x,y,pixel)
 {
-  (video+(4*VIDEO_W*y)+(4*x)).u32 = pixel;
+  (video_field.ptr+(4*VIDEO_W*y)+(4*x)).u32 = pixel;
 }
 
 
@@ -245,10 +243,10 @@ print_character(dir,anim,dst_x,dst_y)
        if anim == 1{src_x = CHR_W;}
   else if anim == 3{src_x = CHR_W*2;}
 
-  var  dst_ptr_base = video+(4*VIDEO_W*dst_y)+(4*dst_x);
+  var  dst_ptr_base = video_field.ptr+(4*VIDEO_W*dst_y)+(4*dst_x);
 
-  var  src_pitch = 4*(image+4).u32;
-  var  src_ptr_base = image+8+(src_pitch*src_y)+(4*src_x);
+  var  src_pitch = 4*(image.ptr+4).u32;
+  var  src_ptr_base = image.ptr+8+(src_pitch*src_y)+(4*src_x);
 
     for y in CHR_H
     {
@@ -288,7 +286,7 @@ print_character(dir,anim,dst_x,dst_y)
 fn
 fill(x,y,w,h,pixel)
 {
-  var  base_ptr = video+(4*VIDEO_W*y)+(4*x);
+  var  base_ptr = video_field.ptr+(4*VIDEO_W*y)+(4*x);
 
     for y_off in h
     {
@@ -319,59 +317,80 @@ test(x,y)
 }
 
 
+static  g_dir = 0;
+
+static  g_x = 128;
+static  g_y = 128;
+static  g_anim = 0;
+static  g_x_move_value = 0;
+static  g_y_move_value = 0;
+
+
 fn
-main()
+video_proc()
 {
-  video = video_field;
-
-  var  dir = 0;
-
-  var  x = 80;
-  var  y = 80;
-  var  anim = 0;
-  var  x_move_value = 0;
-  var  y_move_value = 0;
-  var  last_time = 0;
-
   loop
   {
     fill(0,0,VIDEO_W,VIDEO_H,0);
 
+    print_int(g_x,print14_unicode,16*8, 0,16,0xFFFFFFFF);
+    print_int(g_y,print14_unicode,16*8,16,16,0xFFFFFFFF);
+
+    print_character(g_dir,g_anim>>1&3,g_x,g_y);
+
+    halt;
+  }
+}
+
+
+fn
+object_proc()
+{
+  loop
+  {
+    var  input = sys.input();
+
       if input&Z_KEY
       {
-        sys.spawn(test,x,y);
+        sys.spawn(test,g_x,g_y);
       }
 
 
-      if (x_move_value == 0) && (y_move_value == 0)
+      if (g_x_move_value == 0) && (g_y_move_value == 0)
       {
-             if (input&UP_KEY   ){dir =  BACK_DIR;  y_move_value = 24;}
-        else if (input&DOWN_KEY ){dir = FRONT_DIR;  y_move_value = 24;}
-             if (input&LEFT_KEY ){dir =  LEFT_DIR;  x_move_value = 24;}
-        else if (input&RIGHT_KEY){dir = RIGHT_DIR;  x_move_value = 24;}
+             if (input&UP_KEY   ){g_dir =  BACK_DIR;  g_y_move_value = 24;}
+        else if (input&DOWN_KEY ){g_dir = FRONT_DIR;  g_y_move_value = 24;}
+             if (input&LEFT_KEY ){g_dir =  LEFT_DIR;  g_x_move_value = 24;}
+        else if (input&RIGHT_KEY){g_dir = RIGHT_DIR;  g_x_move_value = 24;}
       }
 
     else
       {
-             if dir ==  BACK_DIR{y_move_value -= 2;  y -= 2;}
-        else if dir == FRONT_DIR{y_move_value -= 2;  y += 2;}
-             if dir ==  LEFT_DIR{x_move_value -= 2;  x -= 2;}
-        else if dir == RIGHT_DIR{x_move_value -= 2;  x += 2;}
+          for _ in 2
+          {
+                 if g_dir ==  BACK_DIR{g_y_move_value -= 2;  g_y -= 2;}
+            else if g_dir == FRONT_DIR{g_y_move_value -= 2;  g_y += 2;}
+                 if g_dir ==  LEFT_DIR{g_x_move_value -= 2;  g_x -= 2;}
+            else if g_dir == RIGHT_DIR{g_x_move_value -= 2;  g_x += 2;}
 
-        anim += 1;
+            g_anim += 1;
+          }
       }
 
 
-    print_int(x,print14_unicode,16*8, 0,16,0xFFFFFFFF);
-    print_int(y,print14_unicode,16*8,16,16,0xFFFFFFFF);
-
-    print_character(dir,anim>>1&3,x,y);
-
     halt;
   }
+}
 
 
-  loop{halt;}
+fn
+main()
+{
+  video = video_field.ptr;
+
+  sys.spawn(video_proc);
+  sys.spawn(object_proc);
+
 }
     </textarea>
     <textarea id="asm_text" cols="48" rows="12">
@@ -385,23 +404,27 @@ main()
         put_byte,
         get_word,
         put_word,
-        get_io,
+        set_input,
+        get_data_address,
         get_const,
         process,
         get_error_message,
+        transfer_ex_img,
         compile,
-        add_img,
         setup } from "./pkg/gblib.js";
 
       let  g_text;
       let  g_asmtext;
 
       let  g_ready;
+      let  g_timer_id;
 
       let  g_cv;
       let  g_cvctx;
       let  g_imgdat;
       let  g_ex_img;
+      let  g_ex_img_cv;
+      let  g_ex_img_ctx;
 
       let  g_actx;
       let  g_sin_osc;
@@ -429,11 +452,7 @@ main()
 
       const  g_volume_max = 0.1;
 
-      const  g_millisec = 1000/20;
-
-      let  g_input_addr;
-      let  g_video_addr;
-      let   g_time_addr;
+      const  g_millisec = 1000/40;
 
       let  g_sin_freq_addr;
       let  g_sin_vol_addr ;
@@ -565,22 +584,14 @@ main()
       function
       refresh()
       {
-          if(!g_ready)
-          {
-            return;
-          }
-
-
-        put_byte(g_input_addr,g_key_state);
-
-        const  new_time = get_word(g_time_addr)+g_millisec;
-
-        put_word(g_time_addr,new_time);
+        set_input(g_key_state|0);
 
         process();
 
 
-        const  base = get_word(g_video_addr);
+        const  video_addr = get_data_address("video");
+
+        const  base = get_word(video_addr);
 
           for(let  i = 0|0;  i < (g_imgdat.width*g_imgdat.height);  ++i)
           {
@@ -602,19 +613,24 @@ main()
       }
 
 
+      function  get_ex_img_w(){return g_ex_img_w;}
+      function  get_ex_img_h(){return g_ex_img_h;}
+      function  get_ex_img_data(){return g_ex_img_data;}
+
       function
       run()
       {
-        const  ex_img_cv = document.createElement("canvas");
+        clearInterval(g_timer_id);
 
-        ex_img_cv.width  = g_ex_img.width;
-        ex_img_cv.height = g_ex_img.height;
+          if(!g_ready)
+          {
+            return;
+          }
 
-        const  ctx = ex_img_cv.getContext("2d");
 
-        ctx.drawImage(g_ex_img,0,0);
+        const  ex_img_data = g_ex_img_ctx.getImageData(0,0,g_ex_img_cv.width,g_ex_img_cv.height);
 
-        const  ex_imgdat = ctx.getImageData(0,0,ex_img_cv.width,ex_img_cv.height);
+        transfer_ex_img(g_ex_img.width,g_ex_img.height,ex_img_data.data);
 
           if(!compile(g_text.value))
           {
@@ -624,33 +640,19 @@ main()
           }
 
 
-        add_img(ex_imgdat.width,ex_imgdat.height,ex_imgdat.data);
-
-        g_ready = setup(1024*1024*32);
-
-          if(!g_ready)
-          {
-            g_asmtext.value = get_error_message();
-
-            return;
-          }
+        g_asmtext.value = setup(1024*1024*32);
 
 
-        g_asmtext.value = g_ready;
-
-        g_input_addr = get_io("input");
-        g_video_addr = get_io("video");
-        g_time_addr  = get_io("time");
-        g_sin_freq_addr = get_io("sin_freq");
-        g_sin_vol_addr  = get_io("sin_vol");
-        g_squ_freq_addr = get_io("squ_freq");
-        g_squ_vol_addr  = get_io("squ_vol");
-        g_saw_freq_addr = get_io("saw_freq");
-        g_saw_vol_addr  = get_io("saw_vol");
-        g_tri_freq_addr = get_io("tri_freq");
-        g_tri_vol_addr  = get_io("tri_vol");
-        g_noi_vol_addr  = get_io("noi_vol");
-        g_report_addr   = get_io("report");
+        g_sin_freq_addr = get_data_address("sin_freq");
+        g_sin_vol_addr  = get_data_address("sin_vol");
+        g_squ_freq_addr = get_data_address("squ_freq");
+        g_squ_vol_addr  = get_data_address("squ_vol");
+        g_saw_freq_addr = get_data_address("saw_freq");
+        g_saw_vol_addr  = get_data_address("saw_vol");
+        g_tri_freq_addr = get_data_address("tri_freq");
+        g_tri_vol_addr  = get_data_address("tri_vol");
+        g_noi_vol_addr  = get_data_address("noi_vol");
+        g_report_addr   = get_data_address("report");
 
         g_up_key    = get_const("UP_KEY");
         g_left_key  = get_const("LEFT_KEY");
@@ -670,6 +672,9 @@ main()
           {
             g_imgdat.data[(4*i)+3] = 255;
           }
+
+
+        g_timer_id = setInterval(refresh,g_millisec);
       }
 
       init().then(() => {
@@ -680,11 +685,6 @@ main()
         g_cvctx.fillStyle = "rgb(0,0,0)";
 
         g_cvctx.fillRect(0,0,g_cv.width,g_cv.height);
-
-
-        g_ex_img = new Image();
-
-        g_ex_img.src = "chr.png";
 
 
         g_report = document.getElementById("report");
@@ -740,7 +740,23 @@ main()
         });
 
 
-        setInterval(refresh,g_millisec);
+        g_ex_img = new Image();
+
+        g_ex_img.onload = function(){
+          g_ex_img_cv = document.createElement("canvas");
+
+          g_ex_img_cv.width  = g_ex_img.width;
+          g_ex_img_cv.height = g_ex_img.height;
+
+          g_ex_img_ctx = g_ex_img_cv.getContext("2d");
+
+          g_ex_img_ctx.drawImage(g_ex_img,0,0);
+
+          g_ready |= 1;
+
+        };
+
+        g_ex_img.src = "chr.png";
       });
     </script>
   </body>

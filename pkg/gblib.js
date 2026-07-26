@@ -1,17 +1,6 @@
 /* @ts-self-types="./gblib.d.ts" */
 
 /**
- * @param {number} w
- * @param {number} h
- * @param {Uint8Array} data
- */
-export function add_img(w, h, data) {
-    const ptr0 = passArray8ToWasm0(data, wasm.__wbindgen_malloc);
-    const len0 = WASM_VECTOR_LEN;
-    wasm.add_img(w, h, ptr0, len0);
-}
-
-/**
  * @param {string} s
  * @returns {boolean}
  */
@@ -43,6 +32,17 @@ export function get_const(s) {
 }
 
 /**
+ * @param {string} s
+ * @returns {number}
+ */
+export function get_data_address(s) {
+    const ptr0 = passStringToWasm0(s, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.get_data_address(ptr0, len0);
+    return ret >>> 0;
+}
+
+/**
  * @returns {string}
  */
 export function get_error_message() {
@@ -56,17 +56,6 @@ export function get_error_message() {
     } finally {
         wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
     }
-}
-
-/**
- * @param {string} s
- * @returns {number}
- */
-export function get_io(s) {
-    const ptr0 = passStringToWasm0(s, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.get_io(ptr0, len0);
-    return ret >>> 0;
 }
 
 /**
@@ -99,17 +88,38 @@ export function put_word(off, v) {
 }
 
 /**
+ * @param {number} v
+ */
+export function set_input(v) {
+    wasm.set_input(v);
+}
+
+/**
  * @param {number} freq
- * @returns {string | undefined}
+ * @returns {string}
  */
 export function setup(freq) {
-    const ret = wasm.setup(freq);
-    let v1;
-    if (ret[0] !== 0) {
-        v1 = getStringFromWasm0(ret[0], ret[1]).slice();
-        wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    let deferred1_0;
+    let deferred1_1;
+    try {
+        const ret = wasm.setup(freq);
+        deferred1_0 = ret[0];
+        deferred1_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
     }
-    return v1;
+}
+
+/**
+ * @param {number} w
+ * @param {number} h
+ * @param {Uint8Array} data
+ */
+export function transfer_ex_img(w, h, data) {
+    const ptr0 = passArray8ToWasm0(data, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    wasm.transfer_ex_img(w, h, ptr0, len0);
 }
 function __wbg_get_imports() {
     const import0 = {
