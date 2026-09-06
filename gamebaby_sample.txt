@@ -1,0 +1,472 @@
+
+
+static    screen_address;
+static offscreen_address;
+
+static screen_status;
+
+static video_field[VIDEO_W*VIDEO_H]: u32;
+
+const SCREEN_W = 400;
+const SCREEN_H = 320;
+const VIDEO_W = SCREEN_W*2;
+const VIDEO_H = SCREEN_H*2;
+
+
+static sin_freq;
+static sin_vol ;
+static squ_freq;
+static squ_vol ;
+static saw_freq;
+static saw_vol ;
+static tri_freq;
+static tri_vol ;
+static noi_vol ;
+
+static report;
+
+
+const    UP_KEY = 0b00000001;
+const  LEFT_KEY = 0b00000010;
+const RIGHT_KEY = 0b00000100;
+const  DOWN_KEY = 0b00001000;
+const     Z_KEY = 0b00010000;
+const     X_KEY = 0b00100000;
+const     C_KEY = 0b01000000;
+const     V_KEY = 0b10000000;
+
+const FRONT_DIR = 0;
+const  LEFT_DIR = 1;
+const RIGHT_DIR = 2;
+const  BACK_DIR = 3;
+
+const  CHR_W = 24;
+const  CHR_H = 40;
+
+
+
+
+fn
+sleep(tm)
+{
+  var  base = sys.timer();
+
+    loop
+    {
+        if (sys.timer()-base) >= tm
+        {
+          break;
+        }
+
+
+      halt;
+    }
+}
+
+
+fn
+dot2(x,y,pixel)
+{
+  screen_address[VIDEO_W*y][x] = pixel;
+}
+
+
+fn
+dot(x,y,pixel)
+{
+  (screen_address+(4*VIDEO_W*y)+(4*x)).u32ref = pixel;
+}
+
+
+fn
+draw_rect(x,y,w,h,pixel)
+{
+    for off in w
+    {
+      dot(x+off,y    ,pixel);
+      dot(x+off,y+h-1,pixel);
+    }
+
+
+    for off in h
+    {
+      dot(x    ,y+off,pixel);
+      dot(x+w-1,y+off,pixel);
+    }
+}
+
+
+fn
+fill_rect(x,y,w,h,pixel)
+{
+    for y_off in h{
+    for x_off in w{
+      dot(x+x_off,y+y_off,pixel);
+    }}
+}
+
+
+fn
+print_int(i,f,x,y,w,pixel)
+{
+    if i == 0
+    {
+      f('0',x,y,pixel);
+
+      return;
+    }
+
+
+    while i
+    {
+      f('0'+(i%10),x,y,pixel);
+
+      x -=  w;
+      i /= 10;
+    }
+}
+
+
+fn
+print8_unicode(u,x,y,pixel)
+{
+  var  ptr = FONT8_START+(8*u);
+
+    for y_off in 8
+    {
+      var  bits = ptr.u8ref;
+                  ptr += 1;
+
+        for x_off in 8
+        {
+            if bits&0x80
+            {
+              dot(x+x_off,y+y_off,pixel);
+            }
+
+
+          bits <<= 1;
+        }
+    }
+}
+
+
+fn
+print14_unicode(u,x,y,pixel)
+{
+  var  ptr = FONT14_START+(2*14*u);
+
+    for y_off in 14
+    {
+      var  bits = ptr.u16ref;
+                  ptr += 2;
+
+        for x_off in 14
+        {
+            if bits&0x8000
+            {
+              dot(x+x_off,y+y_off,pixel);
+            }
+
+
+          bits <<= 1;
+        }
+    }
+}
+
+
+fn
+print14_unicode_s(s,x,y,pixel)
+{
+    loop
+    {
+      var  u = s.u16ref;
+               s += 2;
+
+        if u == 0
+        {
+          break;
+        }
+
+
+      print14_unicode(u,x,y,pixel);
+
+      x += 16;
+    }
+}
+
+
+fn
+fill(x,y,w,h,pixel)
+{
+  var  base_ptr = screen_address+(4*VIDEO_W*y)+(4*x);
+
+    for y_off in h
+    {
+      var  ptr = base_ptr             ;
+                 base_ptr += 4*VIDEO_W;
+
+        for x_off in w
+        {
+          ptr.u32ref = pixel;
+
+          ptr += 4;
+        }
+    }
+}
+
+
+const
+BASE_SIZE = 6;
+
+const
+MIDDLE_SIZE = BASE_SIZE*BASE_SIZE;
+
+const
+LARGE_SIZE = MIDDLE_SIZE*BASE_SIZE;
+
+static
+table[BASE_SIZE*BASE_SIZE]: u8{
+
+0,0,1,1,1,1,
+0,0,1,1,1,1,
+0,1,1,1,1,1,
+0,1,1,1,1,1,
+1,1,1,1,1,1,
+1,1,1,1,1,1,
+
+};
+
+static
+base[BASE_SIZE*BASE_SIZE]: u8;
+
+static
+middle[MIDDLE_SIZE*MIDDLE_SIZE]: u8;
+
+static
+large[LARGE_SIZE*LARGE_SIZE]: u8;
+
+
+fn
+draw_bmp(ptr,sz,x,y,pix_sz)
+{
+    for y_off in sz{
+    for x_off in sz{
+      var  v = get(ptr,sz,x_off,y_off);
+
+      var  pix = BLUE;
+
+           if v == 1{pix = DGREEN;}
+      else if v == 2{pix =  GREEN;}
+      else if v == 3{pix = LGREEN;}
+
+      fill_rect(x+(pix_sz*x_off),y+(pix_sz*y_off),pix_sz,pix_sz,pix);
+    }}
+}
+
+
+fn
+get(ptr,sz,x,y)
+{
+  return ptr.u8ref[(sz*y)+x];
+}
+
+
+fn
+check_zero(x,y)
+{
+    if (x >= 0)
+    && (y >= 0)
+    && (x <  BASE_SIZE)
+    && (y <  BASE_SIZE)
+    {
+      return table[(BASE_SIZE*y)+x] == 0;
+    }
+
+
+  return false;
+}
+
+
+fn
+table_to_base()
+{
+    for y in BASE_SIZE{
+    for x in BASE_SIZE{
+      var  v = table[(BASE_SIZE*y)+x];
+
+        if v
+        {
+          var  t  = check_zero(x-1,y  );
+               t |= check_zero(x+1,y  );
+               t |= check_zero(x  ,y-1);
+               t |= check_zero(x  ,y+1);
+
+            if t{v = 2;}
+          else  {v = 1;}
+        }
+
+
+      base[(BASE_SIZE*y)+x] = v;
+    }}
+}
+
+
+fn
+transfer(dst_ptr,dst_sz,src_ptr,src_sz)
+{
+    for y in BASE_SIZE{
+    for x in BASE_SIZE{
+      var  basval = base[(BASE_SIZE*y)+x];
+
+        for yy in src_sz{
+        for xx in src_sz{
+          var  v = get(src_ptr,src_sz,xx,yy);
+
+            if basval == 0
+            {
+              v = 0;
+            }
+
+          else
+            if basval == 1
+            {
+                if v == 0
+                {
+                  v = 1;
+                }
+            }
+
+
+          dst_ptr.u8ref[(dst_sz*(src_sz*y+yy))+(src_sz*x+xx)] = v;
+        }}
+    }}
+}
+
+
+const
+PIXEL_SIZE = 8;
+
+const    BLUE = 0x0000FF00;
+const   GREEN = 0x00FF0000;
+const  LGREEN = 0x1FFF1F00;
+const  DGREEN = 0x00EF0000;
+
+fn
+update_base()
+{
+  draw_bmp(base.ptr,BASE_SIZE,0,0,PIXEL_SIZE);
+
+  draw_rect(PIXEL_SIZE*cursor_x,PIXEL_SIZE*cursor_y,PIXEL_SIZE-1,PIXEL_SIZE-1,0x00000000);
+  draw_rect(PIXEL_SIZE*cursor_x,PIXEL_SIZE*cursor_y,PIXEL_SIZE  ,PIXEL_SIZE  ,0xFFFFFFFF);
+}
+
+
+fn
+update_all()
+{
+  update_base();
+
+  var  x = PIXEL_SIZE*BASE_SIZE+4;
+
+  draw_bmp(middle.ptr,MIDDLE_SIZE,x,0,2);
+
+  x += MIDDLE_SIZE*2+4;
+
+  draw_bmp(large.ptr,LARGE_SIZE,x,0,1);
+}
+
+
+static cursor_x;
+static cursor_y;
+
+
+fn
+flip()
+{
+  var  tmp = offscreen_address                       ;
+             offscreen_address = screen_address      ;
+                                 screen_address = tmp;
+
+  screen_status = 1;
+}
+
+
+fn
+process_input()
+{
+  var  input = sys.input();
+
+    if input&Z_KEY
+    {
+      var  ptr = table[(BASE_SIZE*cursor_y)+cursor_x].ptr;
+
+      ptr.u8ref = !ptr.u8ref;
+
+      table_to_base();
+
+      transfer(middle.ptr,MIDDLE_SIZE,base.ptr,BASE_SIZE);
+      transfer(large.ptr,LARGE_SIZE,middle.ptr,MIDDLE_SIZE);
+
+      update_all();
+
+      screen_status = 1;
+    }
+
+  else
+    {
+      var  flag = 0;
+
+           if (input& LEFT_KEY) && (cursor_x >             0){  cursor_x -= 1;  flag = 1;}
+      else if (input&RIGHT_KEY) && (cursor_x < (BASE_SIZE-1)){  cursor_x += 1;  flag = 1;}
+
+           if (input&  UP_KEY) && (cursor_y >             0){  cursor_y -= 1;  flag = 1;}
+      else if (input&DOWN_KEY) && (cursor_y < (BASE_SIZE-1)){  cursor_y += 1;  flag = 1;}
+
+        if flag
+        {
+          update_base();
+
+          screen_status = 1;
+        }
+    }
+}
+
+
+fn
+main()
+{
+     screen_address = video_field.ptr             ;
+  offscreen_address = video_field.ptr+(4*SCREEN_W);
+
+  table_to_base();
+
+  transfer(middle.ptr,MIDDLE_SIZE,base.ptr,BASE_SIZE);
+  transfer(large.ptr,LARGE_SIZE,middle.ptr,MIDDLE_SIZE);
+
+  update_all();
+
+  screen_status = 1;
+
+  var  last;
+
+    loop
+    {
+      var  now = sys.timer();
+
+        if now > (last+200)
+        {
+          last = now;
+
+          process_input();
+        }
+
+
+      halt;
+    }
+}
+
+
+
+
+

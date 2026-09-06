@@ -24,20 +24,32 @@
       display: flex;
       flex-direction: row;
     }
+    #freq{
+      width: 3em;
+    }
     </style>
   </head>
   <body>
-自作のプログラミング言語とコンパイラーと仮想機械を使って、<br>
-ゲーム機のようなものを再現しています。<br>
-ソースコードは<a href="https://github.com/mugisaku/gbcc-rust">https://github.com/mugisaku/gbcc-rust</a>
-  <hr>
-  <button id="run_btn">run</button>
-  <button id="audio_btn">audio on/off</button><p>
   <span class="root">
     <span class="console">
-      <span id="report"></span>
-      <canvas id="display" width="400" height="200">
+
+      <span>
+        <input id="freq" type="number" max="800" min="1" value="320"/>Mhz
+        <button id="run_btn">run</button>
+        <button id="stop_btn">stop</button>
+        <button id="resume_btn">resume</button>
+        <button id="audio_btn">audio on/off</button>
+      </span>
+
+      <span>
+        状態: <span id="status">stop</span>
+        、
+        REPORT: <span id="report"></span>
+      </span>
+
+      <canvas id="display" width="400" height="320">
       </canvas>
+
       <span class="input">
         <span class="cursor">
           <button id="up">↑</button>
@@ -54,346 +66,16 @@
           <button id="v">V</button>
         </span>
       </span>
+
+      <span>
+      <hr>
+ソースコードは<a href="https://github.com/mugisaku/gbcc-rust">https://github.com/mugisaku/gbcc-rust</a>
+      </span>
     </span>
   <span>
-    <textarea id="text" cols="48" rows="12">
-static video;
-
-static sin_freq;
-static sin_vol ;
-static squ_freq;
-static squ_vol ;
-static saw_freq;
-static saw_vol ;
-static tri_freq;
-static tri_vol ;
-static noi_vol ;
-
-static report;
-
-static video_field[4*VIDEO_W*VIDEO_H];
-
-const VIDEO_W = 400;
-const VIDEO_H = 200;
-
-const    UP_KEY = 0b00000001;
-const  LEFT_KEY = 0b00000010;
-const RIGHT_KEY = 0b00000100;
-const  DOWN_KEY = 0b00001000;
-const     Z_KEY = 0b00010000;
-const     X_KEY = 0b00100000;
-const     C_KEY = 0b01000000;
-const     V_KEY = 0b10000000;
-
-const FRONT_DIR = 0;
-const  LEFT_DIR = 1;
-const RIGHT_DIR = 2;
-const  BACK_DIR = 3;
-
-const  CHR_W = 24;
-const  CHR_H = 40;
-
-
-
-
-fn
-sleep(tm)
-{
-  var  base = sys.timer();
-
-    loop
-    {
-        if (sys.timer()-base) >= tm
-        {
-          break;
-        }
-
-
-      halt;
-    }
-}
-
-
-fn
-dot(x,y,pixel)
-{
-  (video_field.ptr+(4*VIDEO_W*y)+(4*x)).u32 = pixel;
-}
-
-
-fn
-draw_rect(x,y,w,h,pixel)
-{
-    for off in w
-    {
-      dot(x+off,y    ,pixel);
-      dot(x+off,y+h-1,pixel);
-    }
-
-
-    for off in h
-    {
-      dot(x    ,y+off,pixel);
-      dot(x+w-1,y+off,pixel);
-    }
-}
-
-
-fn
-print_int(i,f,x,y,w,pixel)
-{
-    if i == 0
-    {
-      f('0',x,y,pixel);
-
-      return;
-    }
-
-
-    while i
-    {
-      f('0'+(i%10),x,y,pixel);
-
-      x -=  w;
-      i /= 10;
-    }
-}
-
-
-fn
-print8_unicode(u,x,y,pixel)
-{
-  var  ptr = FONT8_START+(8*u);
-
-    for y_off in 8
-    {
-      var  bits = ptr.u8;
-                  ptr += 1;
-
-        for x_off in 8
-        {
-            if bits&0x80
-            {
-              dot(x+x_off,y+y_off,pixel);
-            }
-
-
-          bits <<= 1;
-        }
-    }
-}
-
-
-fn
-print14_unicode(u,x,y,pixel)
-{
-  var  ptr = FONT14_START+(2*14*u);
-
-    for y_off in 14
-    {
-      var  bits = ptr.u16;
-                  ptr += 2;
-
-        for x_off in 14
-        {
-            if bits&0x8000
-            {
-              dot(x+x_off,y+y_off,pixel);
-            }
-
-
-          bits <<= 1;
-        }
-    }
-}
-
-
-fn
-print14_unicode_s(s,x,y,pixel)
-{
-    loop
-    {
-      var  u = s.u16;
-               s += 2;
-
-        if u == 0
-        {
-          break;
-        }
-
-
-      print14_unicode(u,x,y,pixel);
-
-      x += 16;
-    }
-}
-
-
-fn
-print_character(dir,anim,dst_x,dst_y)
-{
-  var  src_x = 0;
-  var  src_y = 0;
-  var  rev = 0;
-
-       if (dir == LEFT_DIR) {src_y = CHR_H;}
-  else if (dir == RIGHT_DIR){src_y = CHR_H;  rev = 1;}
-  else if (dir == BACK_DIR) {src_y = CHR_H*2;}
-
-       if anim == 1{src_x = CHR_W;}
-  else if anim == 3{src_x = CHR_W*2;}
-
-  var  dst_ptr_base = video_field.ptr+(4*VIDEO_W*dst_y)+(4*dst_x);
-
-  var  src_pitch = 4*(image.ptr+4).u32;
-  var  src_ptr_base = image.ptr+8+(src_pitch*src_y)+(4*src_x);
-
-    for y in CHR_H
-    {
-      var  dst_ptr = dst_ptr_base;
-                     dst_ptr_base += 4*VIDEO_W;
-
-      var  src_ptr = src_ptr_base;
-                     src_ptr_base += src_pitch;
-
-        if rev
-        {
-          dst_ptr += 4*CHR_W;
-
-            for x in CHR_W
-            {
-              dst_ptr.u32 = src_ptr.u32;
-
-              dst_ptr -= 4;
-              src_ptr += 4;
-            }
-        }
-
-      else
-        {
-            for x in CHR_W
-            {
-              dst_ptr.u32 = src_ptr.u32;
-
-              dst_ptr += 4;
-              src_ptr += 4;
-            }
-        }
-    }
-}
-
-
-fn
-fill(x,y,w,h,pixel)
-{
-  var  base_ptr = video_field.ptr+(4*VIDEO_W*y)+(4*x);
-
-    for y_off in h
-    {
-      var  ptr = base_ptr             ;
-                 base_ptr += 4*VIDEO_W;
-
-        for x_off in w
-        {
-          ptr.u32 = pixel;
-
-          ptr += 4;
-        }
-    }
-}
-
-
-fn
-test(x,y)
-{
-    while x < (VIDEO_W-32)
-    {
-      draw_rect(x,y,32,32,0xFFFFFFFF);
-
-      x += 8;
-
-      halt;
-    }
-}
-
-
-static  g_dir = 0;
-
-static  g_x = 128;
-static  g_y = 128;
-static  g_anim = 0;
-static  g_x_move_value = 0;
-static  g_y_move_value = 0;
-
-
-fn
-video_proc()
-{
-  loop
-  {
-    fill(0,0,VIDEO_W,VIDEO_H,0);
-
-    print_int(g_x,print14_unicode,16*8, 0,16,0xFFFFFFFF);
-    print_int(g_y,print14_unicode,16*8,16,16,0xFFFFFFFF);
-
-    print_character(g_dir,g_anim>>1&3,g_x,g_y);
-
-    halt;
-  }
-}
-
-
-fn
-object_proc()
-{
-  loop
-  {
-    var  input = sys.input();
-
-      if input&Z_KEY
-      {
-        sys.spawn(test,g_x,g_y);
-      }
-
-
-      if (g_x_move_value == 0) && (g_y_move_value == 0)
-      {
-             if (input&UP_KEY   ){g_dir =  BACK_DIR;  g_y_move_value = 24;}
-        else if (input&DOWN_KEY ){g_dir = FRONT_DIR;  g_y_move_value = 24;}
-             if (input&LEFT_KEY ){g_dir =  LEFT_DIR;  g_x_move_value = 24;}
-        else if (input&RIGHT_KEY){g_dir = RIGHT_DIR;  g_x_move_value = 24;}
-      }
-
-    else
-      {
-          for _ in 2
-          {
-                 if g_dir ==  BACK_DIR{g_y_move_value -= 2;  g_y -= 2;}
-            else if g_dir == FRONT_DIR{g_y_move_value -= 2;  g_y += 2;}
-                 if g_dir ==  LEFT_DIR{g_x_move_value -= 2;  g_x -= 2;}
-            else if g_dir == RIGHT_DIR{g_x_move_value -= 2;  g_x += 2;}
-
-            g_anim += 1;
-          }
-      }
-
-
-    halt;
-  }
-}
-
-
-fn
-main()
-{
-  video = video_field.ptr;
-
-  sys.spawn(video_proc);
-  sys.spawn(object_proc);
-
-}
+    <textarea id="text" cols="48" rows="10">
     </textarea>
-    <textarea id="asm_text" cols="48" rows="12">
+    <textarea id="asm_text" cols="48" rows="10">
     </textarea>
   </span>
 
@@ -405,6 +87,7 @@ main()
         get_word,
         put_word,
         set_input,
+        get_input,
         get_data_address,
         get_const,
         process,
@@ -418,6 +101,10 @@ main()
 
       let  g_ready;
       let  g_timer_id;
+      let  g_freq;
+
+      const  REFRESH_RATE = 24;
+      const  INTERVAL = 1000/REFRESH_RATE;
 
       let  g_cv;
       let  g_cvctx;
@@ -425,6 +112,10 @@ main()
       let  g_ex_img;
       let  g_ex_img_cv;
       let  g_ex_img_ctx;
+      let  g_video_pitch;
+      let  g_flip_counter;
+      let  g_scr_addr;
+      let  g_scrst_addr;
 
       let  g_actx;
       let  g_sin_osc;
@@ -451,8 +142,6 @@ main()
       let  g_v_key;
 
       const  g_volume_max = 0.1;
-
-      const  g_millisec = 1000/40;
 
       let  g_sin_freq_addr;
       let  g_sin_vol_addr ;
@@ -586,30 +275,40 @@ main()
       {
         set_input(g_key_state|0);
 
-        process();
+        process(g_freq,INTERVAL);
 
-
-        const  video_addr = get_data_address("video");
-
-        const  base = get_word(video_addr);
-
-          for(let  i = 0|0;  i < (g_imgdat.width*g_imgdat.height);  ++i)
+          if(get_word(g_scrst_addr))
           {
-            const  rgba_i = 4*i;
+            put_word(g_scrst_addr,0);
 
-            const  pixel = get_word(base+rgba_i);
+            const  base = get_word(g_scr_addr);
 
-            g_imgdat.data[rgba_i  ] = (pixel>>24)&0xFF;
-            g_imgdat.data[rgba_i+1] = (pixel>>16)&0xFF;
-            g_imgdat.data[rgba_i+2] = (pixel>> 8)&0xFF;
+            let  i = 0;
+
+              for(let  y = 0;  y < g_imgdat.height;  ++y)
+              {
+                  for(let  x = 0;  x < g_imgdat.width;  ++x)
+                  {
+                    const  offset = 4*((g_video_pitch*y)+x);
+
+                    const  pixel = get_word(base+offset);
+
+                    g_imgdat.data[i  ] = (pixel>>24)&0xFF;
+                    g_imgdat.data[i+1] = (pixel>>16)&0xFF;
+                    g_imgdat.data[i+2] = (pixel>> 8)&0xFF;
+
+                    i += 4;
+                  }
+              }
+
+
+            g_cvctx.putImageData(g_imgdat,0,0);
           }
 
 
-        g_cvctx.putImageData(g_imgdat,0,0);
-
         update_audio();
 
-        g_report.innerText = "REPORT: "+get_word(g_report_addr);
+        g_report.innerText = ""+get_word(g_report_addr);
       }
 
 
@@ -620,7 +319,7 @@ main()
       function
       run()
       {
-        clearInterval(g_timer_id);
+        stop();
 
           if(!g_ready)
           {
@@ -640,9 +339,11 @@ main()
           }
 
 
-        g_asmtext.value = setup(1024*1024*32);
+        g_asmtext.value = setup();
 
 
+        g_scr_addr      = get_data_address("screen_address");
+        g_scrst_addr    = get_data_address("screen_status");
         g_sin_freq_addr = get_data_address("sin_freq");
         g_sin_vol_addr  = get_data_address("sin_vol");
         g_squ_freq_addr = get_data_address("squ_freq");
@@ -663,8 +364,9 @@ main()
         g_c_key     = get_const("C_KEY");
         g_v_key     = get_const("V_KEY");
 
-        g_cv.width  = get_const("VIDEO_W");
-        g_cv.height = get_const("VIDEO_H");
+        g_cv.width  = get_const("SCREEN_W");
+        g_cv.height = get_const("SCREEN_H");
+        g_video_pitch = get_const("VIDEO_W");
 
         g_imgdat = g_cvctx.createImageData(g_cv.width,g_cv.height);
 
@@ -674,10 +376,38 @@ main()
           }
 
 
-        g_timer_id = setInterval(refresh,g_millisec);
+        resume();
       }
 
-      init().then(() => {
+      function
+      stop()
+      {
+        clearInterval(g_timer_id)      ;
+                      g_timer_id = null;
+
+        document.getElementById("status").innerText = "stop";
+      }
+
+      function
+      resume()
+      {
+          if(!g_ready)
+          {
+            return;
+          }
+
+
+        document.getElementById("status").innerText = "running";
+
+        g_freq = parseInt(document.getElementById("freq").value,10)*1000*1000;
+
+        g_freq /= REFRESH_RATE;
+
+        g_timer_id = setInterval(refresh,INTERVAL);
+      }
+
+
+      init().then(async () => {
         g_cv = document.getElementById("display");
 
         g_cvctx = g_cv.getContext("2d");
@@ -692,6 +422,8 @@ main()
         g_asmtext = document.getElementById("asm_text");
 
         document.getElementById("run_btn").addEventListener("click",run);
+        document.getElementById("stop_btn").addEventListener("click",stop);
+        document.getElementById("resume_btn").addEventListener("click",resume);
         document.getElementById("audio_btn").addEventListener("click",switch_audio);
 
         document.getElementById("up").addEventListener("mousedown",function(){g_key_state |=  g_up_key;});
@@ -757,6 +489,12 @@ main()
         };
 
         g_ex_img.src = "chr.png";
+
+
+        const  response = await fetch("./gamebaby_sample.txt");
+        const  result = await response.text();
+
+        g_text.value = result;
       });
     </script>
   </body>

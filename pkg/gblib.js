@@ -59,6 +59,14 @@ export function get_error_message() {
 }
 
 /**
+ * @returns {number}
+ */
+export function get_input() {
+    const ret = wasm.get_input();
+    return ret >>> 0;
+}
+
+/**
  * @param {number} off
  * @returns {number}
  */
@@ -67,8 +75,12 @@ export function get_word(off) {
     return ret >>> 0;
 }
 
-export function process() {
-    wasm.process();
+/**
+ * @param {number} freq
+ * @param {number} tm
+ */
+export function process(freq, tm) {
+    wasm.process(freq, tm);
 }
 
 /**
@@ -95,14 +107,13 @@ export function set_input(v) {
 }
 
 /**
- * @param {number} freq
  * @returns {string}
  */
-export function setup(freq) {
+export function setup() {
     let deferred1_0;
     let deferred1_1;
     try {
-        const ret = wasm.setup(freq);
+        const ret = wasm.setup();
         deferred1_0 = ret[0];
         deferred1_1 = ret[1];
         return getStringFromWasm0(ret[0], ret[1]);
