@@ -3,8 +3,9 @@
 export const memory: WebAssembly.Memory;
 export const get_byte: (a: number) => number;
 export const put_byte: (a: number, b: number) => void;
-export const get_word: (a: number) => number;
-export const put_word: (a: number, b: number) => void;
+export const get_word_hi: (a: number) => number;
+export const get_word_lo: (a: number) => number;
+export const put_word: (a: number, b: number, c: number) => void;
 export const set_input: (a: number) => void;
 export const get_input: () => number;
 export const get_data_address: (a: number, b: number) => number;

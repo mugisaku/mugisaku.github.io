@@ -13,13 +13,15 @@ export function get_error_message(): string;
 
 export function get_input(): number;
 
-export function get_word(off: number): number;
+export function get_word_hi(off: number): number;
+
+export function get_word_lo(off: number): number;
 
 export function process(freq: number, tm: number): void;
 
 export function put_byte(off: number, v: number): void;
 
-export function put_word(off: number, v: number): void;
+export function put_word(off: number, hi: number, lo: number): void;
 
 export function set_input(v: number): void;
 
@@ -33,8 +35,9 @@ export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly get_byte: (a: number) => number;
     readonly put_byte: (a: number, b: number) => void;
-    readonly get_word: (a: number) => number;
-    readonly put_word: (a: number, b: number) => void;
+    readonly get_word_hi: (a: number) => number;
+    readonly get_word_lo: (a: number) => number;
+    readonly put_word: (a: number, b: number, c: number) => void;
     readonly set_input: (a: number) => void;
     readonly get_input: () => number;
     readonly get_data_address: (a: number, b: number) => number;

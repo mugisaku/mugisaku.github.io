@@ -70,8 +70,17 @@ export function get_input() {
  * @param {number} off
  * @returns {number}
  */
-export function get_word(off) {
-    const ret = wasm.get_word(off);
+export function get_word_hi(off) {
+    const ret = wasm.get_word_hi(off);
+    return ret >>> 0;
+}
+
+/**
+ * @param {number} off
+ * @returns {number}
+ */
+export function get_word_lo(off) {
+    const ret = wasm.get_word_lo(off);
     return ret >>> 0;
 }
 
@@ -93,10 +102,11 @@ export function put_byte(off, v) {
 
 /**
  * @param {number} off
- * @param {number} v
+ * @param {number} hi
+ * @param {number} lo
  */
-export function put_word(off, v) {
-    wasm.put_word(off, v);
+export function put_word(off, hi, lo) {
+    wasm.put_word(off, hi, lo);
 }
 
 /**

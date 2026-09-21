@@ -7,6 +7,28 @@ static screen_status;
 
 static video_field[VIDEO_W*VIDEO_H]: u32;
 
+static  mouse_state;
+
+fn  mouse_get_x(){return mouse_state>>16&0xFFFF;}
+fn  mouse_get_y(){return mouse_state&0xFFFF;}
+fn  mouse_is_pressing_l(){return mouse_state>>32&1;}
+fn  mouse_is_pressing_r(){return mouse_state>>32&2;}
+
+
+static rand_state;
+
+fn
+xorshift()
+{
+  rand_state ^= rand_state<<7;
+  rand_state ^= rand_state>>9;
+
+  return rand_state;
+}
+
+
+
+
 const SCREEN_W = 400;
 const SCREEN_H = 320;
 const VIDEO_W = SCREEN_W*2;
@@ -44,31 +66,6 @@ const  CHR_W = 24;
 const  CHR_H = 40;
 
 
-
-
-fn
-sleep(tm)
-{
-  var  base = sys.timer();
-
-    loop
-    {
-        if (sys.timer()-base) >= tm
-        {
-          break;
-        }
-
-
-      halt;
-    }
-}
-
-
-fn
-dot2(x,y,pixel)
-{
-  screen_address[VIDEO_W*y][x] = pixel;
-}
 
 
 fn
@@ -217,163 +214,489 @@ fill(x,y,w,h,pixel)
 
 
 const
-BASE_SIZE = 6;
-
-const
-MIDDLE_SIZE = BASE_SIZE*BASE_SIZE;
-
-const
-LARGE_SIZE = MIDDLE_SIZE*BASE_SIZE;
+PIECE_SIZE = 8;
 
 static
-table[BASE_SIZE*BASE_SIZE]: u8{
+a_piece[PIECE_SIZE*PIECE_SIZE]: u8{
+  0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,
+  1,1,1,1,1,1,1,1,
+  1,1,1,1,1,1,1,1,
+  1,1,1,1,1,1,1,1,
+  1,1,1,1,1,1,1,1,
 
-0,0,1,1,1,1,
-0,0,1,1,1,1,
-0,1,1,1,1,1,
-0,1,1,1,1,1,
-1,1,1,1,1,1,
-1,1,1,1,1,1,
+}
+
+static
+b_piece[PIECE_SIZE*PIECE_SIZE]: u8{
+  0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,
+  1,1,1,1,1,1,1,1,
+  1,1,1,1,1,1,1,1,
+
+}
+
+static
+c_piece[PIECE_SIZE*PIECE_SIZE]: u8{
+  1,1,1,1,1,1,1,1,
+  1,1,1,1,1,1,1,1,
+  0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,
+  1,1,1,1,1,1,1,1,
+  1,1,1,1,1,1,1,1,
+
+}
+
+static
+d_piece[PIECE_SIZE*PIECE_SIZE]: u8{
+  1,1,1,1,1,1,1,1,
+  1,1,1,1,1,1,1,1,
+  0,0,0,0,0,0,1,1,
+  0,0,0,0,0,0,1,1,
+  0,0,0,0,0,0,1,1,
+  0,0,0,0,0,0,1,1,
+  1,1,1,1,1,1,1,1,
+  1,1,1,1,1,1,1,1,
+
+}
+
+static
+e_piece[PIECE_SIZE*PIECE_SIZE]: u8{
+  0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,1,1,
+  0,0,0,0,0,0,1,1,
+
+}
+
+static
+f_piece[PIECE_SIZE*PIECE_SIZE]: u8{
+  0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,
+  1,1,0,0,0,0,1,1,
+  1,1,0,0,0,0,1,1,
+
+}
+
+static
+g_piece[PIECE_SIZE*PIECE_SIZE]: u8{
+  0,0,0,0,0,0,1,1,
+  0,0,0,0,0,0,1,1,
+  0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,
+  1,1,0,0,0,0,1,1,
+  1,1,0,0,0,0,1,1,
+
+}
+
+static
+h_piece[PIECE_SIZE*PIECE_SIZE]: u8{
+  0,0,0,0,0,0,1,1,
+  0,0,0,0,0,1,1,1,
+  0,0,0,0,1,1,1,1,
+  0,0,0,1,1,1,1,1,
+  0,0,1,1,1,1,1,1,
+  0,1,1,1,1,1,1,1,
+  1,1,1,1,1,1,1,1,
+  1,1,1,1,1,1,1,1,
+
+}
+
+static
+i_piece[PIECE_SIZE*PIECE_SIZE]: u8{
+  0,0,0,0,1,1,1,1,
+  0,0,0,0,1,1,1,1,
+  0,0,0,1,1,1,1,1,
+  0,0,1,1,1,1,1,1,
+  1,1,1,1,1,1,1,1,
+  1,1,1,1,1,1,1,1,
+  1,1,1,1,1,1,1,1,
+  1,1,1,1,1,1,1,1,
+
+}
+
+static
+j_piece[PIECE_SIZE*PIECE_SIZE]: u8{
+  0,0,0,0,0,0,1,1,
+  0,0,0,0,0,0,1,1,
+  0,0,0,0,0,0,1,1,
+  0,0,0,0,0,1,1,1,
+  0,0,0,0,0,1,1,1,
+  0,0,0,0,0,1,1,1,
+  0,0,0,0,0,1,1,1,
+  0,0,0,0,1,1,1,1,
+
+}
+
+static
+k_piece[PIECE_SIZE*PIECE_SIZE]: u8{
+  0,0,0,0,1,1,1,1,
+  0,0,0,0,1,1,1,1,
+  0,0,0,1,1,1,1,1,
+  0,0,0,1,1,1,1,1,
+  0,0,1,1,1,1,1,1,
+  0,1,1,1,1,1,1,1,
+  1,1,1,1,1,1,1,1,
+  1,1,1,1,1,1,1,1,
+
+}
+
+
+static
+codes[80]: u32{};
+
+
+
+
+static
+pieces[PIECE_SIZE*PIECE_SIZE*80]: u8{
+  0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,
+
+  1,1,1,1,1,1,1,1,
+  1,1,1,1,1,1,1,1,
+  1,1,1,1,1,1,1,1,
+  1,1,1,1,1,1,1,1,
+  1,1,1,1,1,1,1,1,
+  1,1,1,1,1,1,1,1,
+  1,1,1,1,1,1,1,1,
+  1,1,1,1,1,1,1,1,
+
+  1,1,0,0,0,0,1,1,
+  1,1,0,0,0,0,1,1,
+  0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,
+  1,1,0,0,0,0,1,1,
+  1,1,0,0,0,0,1,1,
 
 };
 
-static
-base[BASE_SIZE*BASE_SIZE]: u8;
+
+const
+WHITE = 0xFFFFFFFF;
+
+const
+BLUE = 0x00FF0000;
+
+const
+GREEN = 0x000FF00;
+
+const
+LGREEN = 0x003FFF3F;
+
+const
+TABLE_SIZE = 16;
 
 static
-middle[MIDDLE_SIZE*MIDDLE_SIZE]: u8;
+table[TABLE_SIZE*TABLE_SIZE]: u8;
 
 static
-large[LARGE_SIZE*LARGE_SIZE]: u8;
+g_number_of_pieces;
 
 
 fn
-draw_bmp(ptr,sz,x,y,pix_sz)
+draw_table()
 {
-    for y_off in sz{
-    for x_off in sz{
-      var  v = get(ptr,sz,x_off,y_off);
+    for y in TABLE_SIZE{
+    for x in TABLE_SIZE{
+      var  i = get_value_unchecked(x,y);
 
-      var  pix = BLUE;
-
-           if v == 1{pix = DGREEN;}
-      else if v == 2{pix =  GREEN;}
-      else if v == 3{pix = LGREEN;}
-
-      fill_rect(x+(pix_sz*x_off),y+(pix_sz*y_off),pix_sz,pix_sz,pix);
+      draw(i,x,y);
     }}
+
+
+  draw_rect(8*cursor_x,8*cursor_y,8,8,WHITE);
+
+  screen_status = 1;
 }
 
 
 fn
-get(ptr,sz,x,y)
+piece_get_unchecked(ptr,x,y)
 {
-  return ptr.u8ref[(sz*y)+x];
+  return ptr.u8ref[(PIECE_SIZE*y)+x];
 }
 
 
 fn
-check_zero(x,y)
+piece_get(ptr,x,y)
 {
     if (x >= 0)
     && (y >= 0)
-    && (x <  BASE_SIZE)
-    && (y <  BASE_SIZE)
+    && (x < PIECE_SIZE)
+    && (y < PIECE_SIZE)
     {
-      return table[(BASE_SIZE*y)+x] == 0;
+      return piece_get_unchecked(ptr,x,y);
     }
 
 
-  return false;
+  return 0;
 }
 
 
 fn
-table_to_base()
+get_piece_ptr(i)
 {
-    for y in BASE_SIZE{
-    for x in BASE_SIZE{
-      var  v = table[(BASE_SIZE*y)+x];
+  return pieces[PIECE_SIZE*PIECE_SIZE*i].ptr;
+}
 
-        if v
+
+fn
+piece_put_unchecked(ptr,x,y,v)
+{
+  ptr.u8ref[(PIECE_SIZE*y)+x] = v;
+}
+
+
+fn
+piece_copy(dst_ptr,src_ptr)
+{
+    for y in PIECE_SIZE{
+    for x in PIECE_SIZE{
+      var  v = piece_get_unchecked(src_ptr,x,y);
+
+      piece_put_unchecked(dst_ptr,x,y,v);
+    }}
+}
+
+
+fn
+piece_copy_and_rot(dst_ptr,src_ptr)
+{
+    for y in PIECE_SIZE{
+    for x in PIECE_SIZE{
+      var  v = piece_get_unchecked(src_ptr,x,y);
+
+      piece_put_unchecked(dst_ptr,PIECE_SIZE-1-y,x,v);
+    }}
+}
+
+
+fn
+draw(i,dst_x,dst_y)
+{
+  var  ptr = get_piece_ptr(i);
+
+    for y in PIECE_SIZE{
+    for x in PIECE_SIZE{
+      var  v = piece_get_unchecked(ptr,x,y);
+
+      var  pixel;
+
+           if v == 0{pixel =   BLUE;}
+      else if v == 1{pixel =  GREEN;}
+      else if v == 2{pixel = LGREEN;}
+
+      dot((PIECE_SIZE*dst_x)+x,(PIECE_SIZE*dst_y)+y,pixel);
+    }}
+}
+
+
+fn
+get_value_unchecked(x,y)
+{
+  return table[(TABLE_SIZE*y)+x];
+}
+
+
+fn
+get_value(x,y)
+{
+    if (x >= 0)
+    && (y >= 0)
+    && (x <  TABLE_SIZE)
+    && (y <  TABLE_SIZE)
+    {
+      return get_value_unchecked(x,y);
+    }
+
+
+  return 0;
+}
+
+
+fn
+put_value_unchecked(x,y,v)
+{
+  table[(TABLE_SIZE*y)+x] = v;
+}
+
+
+fn
+put_value(x,y,v)
+{
+    if (x >= 0)
+    && (y >= 0)
+    && (x <  TABLE_SIZE)
+    && (y <  TABLE_SIZE)
+    {
+      put_value_unchecked(x,y,v);
+    }
+}
+
+
+fn
+get_code(i)
+{
+  var  ptr = get_piece_ptr(i);
+
+  var  code = 0;
+
+    for n in PIECE_SIZE
+    {
+      code <<= 1;
+
+        if piece_get_unchecked(ptr,           n,           0) == 1{code |= 1<<24;}
+        if piece_get_unchecked(ptr,           0,           n) == 1{code |= 1<<16;}
+        if piece_get_unchecked(ptr,PIECE_SIZE-1,           n) == 1{code |= 1<< 8;}
+        if piece_get_unchecked(ptr,           n,PIECE_SIZE-1) == 1{code |= 1    ;}
+    }
+
+
+  return code;
+}
+
+
+fn
+find(bits)
+{
+    for i in g_number_of_pieces
+    {
+      var  code = codes[i];
+
+      var  t = 0;
+
+        if (code>>24)&0xFF == 0xFF{t |= 0b1000;}
+        if (code>>16)&0xFF == 0xFF{t |= 0b0100;}
+        if (code>> 8)&0xFF == 0xFF{t |= 0b0010;}
+        if (code    )&0xFF == 0xFF{t |= 0b0001;}
+
+        if t == bits
         {
-          var  t  = check_zero(x-1,y  );
-               t |= check_zero(x+1,y  );
-               t |= check_zero(x  ,y-1);
-               t |= check_zero(x  ,y+1);
-
-            if t{v = 2;}
-          else  {v = 1;}
+          return i;
         }
+    }
 
 
-      base[(BASE_SIZE*y)+x] = v;
+  return 0;
+}
+
+
+fn
+find2(code)
+{
+    for i in g_number_of_pieces
+    {
+        if codes[i] == code
+        {
+          return i;
+        }
+    }
+
+
+  return 0;
+}
+
+
+fn
+process_edge(i)
+{
+  var  ptr = get_piece_ptr(i);
+
+    for y in PIECE_SIZE{
+    for x in PIECE_SIZE{
+      var  i = piece_get_unchecked(ptr,x,y);
+
+        if i == 1
+        {
+            if (piece_get(ptr,x  ,y-1) == 0)
+            || (piece_get(ptr,x-1,y  ) == 0)
+            || (piece_get(ptr,x+1,y  ) == 0)
+            || (piece_get(ptr,x  ,y+1) == 0)
+            {
+              piece_put_unchecked(ptr,x,y,2);
+            }
+        }
     }}
 }
 
 
 fn
-transfer(dst_ptr,dst_sz,src_ptr,src_sz)
+process_table()
 {
-    for y in BASE_SIZE{
-    for x in BASE_SIZE{
-      var  basval = base[(BASE_SIZE*y)+x];
+    for y in TABLE_SIZE{
+    for x in TABLE_SIZE{
+      var  i = get_value_unchecked(x,y);
 
-        for yy in src_sz{
-        for xx in src_sz{
-          var  v = get(src_ptr,src_sz,xx,yy);
+        if i == 0
+        {
+          var  bits = 0;
 
-            if basval == 0
+            if get_value(x  ,y-1) == 1{bits |= 0b1000;}
+            if get_value(x-1,y  ) == 1{bits |= 0b0100;}
+            if get_value(x+1,y  ) == 1{bits |= 0b0010;}
+            if get_value(x  ,y+1) == 1{bits |= 0b0001;}
+
+
+            if bits
             {
-              v = 0;
+              var  new_i = find(bits);
+
+              put_value_unchecked(x,y,new_i);
             }
-
-          else
-            if basval == 1
-            {
-                if v == 0
-                {
-                  v = 1;
-                }
-            }
-
-
-          dst_ptr.u8ref[(dst_sz*(src_sz*y+yy))+(src_sz*x+xx)] = v;
-        }}
+        }
     }}
 }
 
 
-const
-PIXEL_SIZE = 8;
-
-const    BLUE = 0x0000FF00;
-const   GREEN = 0x00FF0000;
-const  LGREEN = 0x1FFF1F00;
-const  DGREEN = 0x00EF0000;
-
 fn
-update_base()
+process_table_stage2()
 {
-  draw_bmp(base.ptr,BASE_SIZE,0,0,PIXEL_SIZE);
+    for y in TABLE_SIZE{
+    for x in TABLE_SIZE{
+      var  i = get_value_unchecked(x,y);
 
-  draw_rect(PIXEL_SIZE*cursor_x,PIXEL_SIZE*cursor_y,PIXEL_SIZE-1,PIXEL_SIZE-1,0x00000000);
-  draw_rect(PIXEL_SIZE*cursor_x,PIXEL_SIZE*cursor_y,PIXEL_SIZE  ,PIXEL_SIZE  ,0xFFFFFFFF);
-}
+        if i == 0
+        {
+          var  u = (codes[get_value(x  ,y-1)]<<24)&0xFF000000;
+          var  l = (codes[get_value(x-1,y  )]<< 8)&0x00FF0000;
+          var  r = (codes[get_value(x+1,y  )]>> 8)&0x0000FF00;
+          var  d = (codes[get_value(x  ,y+1)]>>24)&0x000000FF;
 
+          var  new_i = find2(u|l|r|d);
 
-fn
-update_all()
-{
-  update_base();
-
-  var  x = PIXEL_SIZE*BASE_SIZE+4;
-
-  draw_bmp(middle.ptr,MIDDLE_SIZE,x,0,2);
-
-  x += MIDDLE_SIZE*2+4;
-
-  draw_bmp(large.ptr,LARGE_SIZE,x,0,1);
+            if new_i
+            {
+              put_value_unchecked(x,y,new_i);
+            }
+        }
+    }}
 }
 
 
@@ -392,44 +715,143 @@ flip()
 }
 
 
+static g_key_lock;
+
 fn
 process_input()
 {
+    if mouse_is_pressing_l()
+    {
+      var  x = mouse_get_x()/PIECE_SIZE;
+      var  y = mouse_get_y()/PIECE_SIZE;
+
+        if (x < TABLE_SIZE)
+        && (y < TABLE_SIZE)
+        {
+          var  ptr = table[(TABLE_SIZE*y)+x].ptr;
+
+            if ptr.u8ref != 1
+            {
+              ptr.u8ref = 1;
+
+              draw_table();
+            }
+        }
+    }
+
+  else
+    if mouse_is_pressing_r()
+    {
+      var  x = mouse_get_x()/PIECE_SIZE;
+      var  y = mouse_get_y()/PIECE_SIZE;
+
+        if (x < TABLE_SIZE)
+        && (y < TABLE_SIZE)
+        {
+          var  ptr = table[(TABLE_SIZE*y)+x].ptr;
+
+            if ptr.u8ref != 0
+            {
+              ptr.u8ref = 0;
+
+              draw_table();
+            }
+        }
+    }
+
+
   var  input = sys.input();
 
     if input&Z_KEY
     {
-      var  ptr = table[(BASE_SIZE*cursor_y)+cursor_x].ptr;
+      var  ptr = table[(TABLE_SIZE*cursor_y)+cursor_x].ptr;
 
-      ptr.u8ref = !ptr.u8ref;
+        if ptr.u8ref != 1
+        {
+          ptr.u8ref = 1;
 
-      table_to_base();
+          draw_table();
+        }
+    }
 
-      transfer(middle.ptr,MIDDLE_SIZE,base.ptr,BASE_SIZE);
-      transfer(large.ptr,LARGE_SIZE,middle.ptr,MIDDLE_SIZE);
+  else
+    if input&X_KEY
+    {
+      var  ptr = table[(TABLE_SIZE*cursor_y)+cursor_x].ptr;
 
-      update_all();
+        if ptr.u8ref != 0
+        {
+          ptr.u8ref = 0;
 
-      screen_status = 1;
+          draw_table();
+        }
+    }
+
+  else
+    if input&C_KEY
+    {
+        if g_key_lock == 0
+        {
+          process_table();
+
+          draw_table();
+
+          g_key_lock = 1;
+        }
+    }
+
+  else
+    if input&V_KEY
+    {
+        if g_key_lock == 0
+        {
+          process_table_stage2();
+
+          draw_table();
+
+          g_key_lock = 1;
+        }
     }
 
   else
     {
+      g_key_lock = 0;
+
       var  flag = 0;
 
-           if (input& LEFT_KEY) && (cursor_x >             0){  cursor_x -= 1;  flag = 1;}
-      else if (input&RIGHT_KEY) && (cursor_x < (BASE_SIZE-1)){  cursor_x += 1;  flag = 1;}
+           if (input& LEFT_KEY) && (cursor_x >              0){  cursor_x -= 1;  flag = 1;}
+      else if (input&RIGHT_KEY) && (cursor_x < (TABLE_SIZE-1)){  cursor_x += 1;  flag = 1;}
 
-           if (input&  UP_KEY) && (cursor_y >             0){  cursor_y -= 1;  flag = 1;}
-      else if (input&DOWN_KEY) && (cursor_y < (BASE_SIZE-1)){  cursor_y += 1;  flag = 1;}
+           if (input&  UP_KEY) && (cursor_y >              0){  cursor_y -= 1;  flag = 1;}
+      else if (input&DOWN_KEY) && (cursor_y < (TABLE_SIZE-1)){  cursor_y += 1;  flag = 1;}
 
         if flag
         {
-          update_base();
-
-          screen_status = 1;
+          draw_table();
         }
     }
+}
+
+
+fn
+process(i,ptr)
+{
+  piece_copy(get_piece_ptr(i),ptr);
+  piece_copy_and_rot(get_piece_ptr(i+1),get_piece_ptr(i  ));
+  piece_copy_and_rot(get_piece_ptr(i+2),get_piece_ptr(i+1));
+  piece_copy_and_rot(get_piece_ptr(i+3),get_piece_ptr(i+2));
+
+  return i+4;
+}
+
+
+fn
+init()
+{
+  for y in TABLE_SIZE{
+  for x in TABLE_SIZE{
+    put_value(x,y,xorshift()%(g_number_of_pieces-1));
+  }}
 }
 
 
@@ -439,14 +861,46 @@ main()
      screen_address = video_field.ptr             ;
   offscreen_address = video_field.ptr+(4*SCREEN_W);
 
-  table_to_base();
+  var  i = process(3,a_piece.ptr);
+       i = process(i,b_piece.ptr);
+       i = process(i,c_piece.ptr);
+       i = process(i,d_piece.ptr);
+       i = process(i,e_piece.ptr);
+       i = process(i,f_piece.ptr);
+       i = process(i,g_piece.ptr);
+       i = process(i,h_piece.ptr);
+       i = process(i,i_piece.ptr);
+  var  n = process(i,j_piece.ptr);
+       n = process(n,k_piece.ptr);
 
-  transfer(middle.ptr,MIDDLE_SIZE,base.ptr,BASE_SIZE);
-  transfer(large.ptr,LARGE_SIZE,middle.ptr,MIDDLE_SIZE);
+  g_number_of_pieces = n;
 
-  update_all();
+    for ii in i
+    {
+      draw(ii,ii,0);
+    }
 
-  screen_status = 1;
+
+  draw(i  ,0,1);
+  draw(i+4,0,2);
+
+  draw(i+1  ,2,1);
+  draw(i+1+4,1,1);
+  draw(i+3  ,1,2);
+  draw(i+3+4,2,2);
+
+  draw(i+2  ,3,2);
+  draw(i+2+4,3,1);
+
+//  init();
+
+  draw_table();
+
+    for i in g_number_of_pieces
+    {
+      codes[i] = get_code(i);
+    }
+
 
   var  last;
 
@@ -454,7 +908,7 @@ main()
     {
       var  now = sys.timer();
 
-        if now > (last+200)
+        if now > (last+80)
         {
           last = now;
 
