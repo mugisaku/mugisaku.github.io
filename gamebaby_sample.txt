@@ -1,216 +1,5 @@
 
 
-static    screen_address;
-static offscreen_address;
-
-static screen_status;
-
-static video_field[VIDEO_W*VIDEO_H]: u32;
-
-static  mouse_state;
-
-fn  mouse_get_x(){return mouse_state>>16&0xFFFF;}
-fn  mouse_get_y(){return mouse_state&0xFFFF;}
-fn  mouse_is_pressing_l(){return mouse_state>>32&1;}
-fn  mouse_is_pressing_r(){return mouse_state>>32&2;}
-
-
-static rand_state;
-
-fn
-xorshift()
-{
-  rand_state ^= rand_state<<7;
-  rand_state ^= rand_state>>9;
-
-  return rand_state;
-}
-
-
-
-
-const SCREEN_W = 400;
-const SCREEN_H = 320;
-const VIDEO_W = SCREEN_W*2;
-const VIDEO_H = SCREEN_H*2;
-
-
-static sin_freq;
-static sin_vol ;
-static squ_freq;
-static squ_vol ;
-static saw_freq;
-static saw_vol ;
-static tri_freq;
-static tri_vol ;
-static noi_vol ;
-
-static report;
-
-
-const    UP_KEY = 0b00000001;
-const  LEFT_KEY = 0b00000010;
-const RIGHT_KEY = 0b00000100;
-const  DOWN_KEY = 0b00001000;
-const     Z_KEY = 0b00010000;
-const     X_KEY = 0b00100000;
-const     C_KEY = 0b01000000;
-const     V_KEY = 0b10000000;
-
-const FRONT_DIR = 0;
-const  LEFT_DIR = 1;
-const RIGHT_DIR = 2;
-const  BACK_DIR = 3;
-
-const  CHR_W = 24;
-const  CHR_H = 40;
-
-
-
-
-fn
-dot(x,y,pixel)
-{
-  (screen_address+(4*VIDEO_W*y)+(4*x)).u32ref = pixel;
-}
-
-
-fn
-draw_rect(x,y,w,h,pixel)
-{
-    for off in w
-    {
-      dot(x+off,y    ,pixel);
-      dot(x+off,y+h-1,pixel);
-    }
-
-
-    for off in h
-    {
-      dot(x    ,y+off,pixel);
-      dot(x+w-1,y+off,pixel);
-    }
-}
-
-
-fn
-fill_rect(x,y,w,h,pixel)
-{
-    for y_off in h{
-    for x_off in w{
-      dot(x+x_off,y+y_off,pixel);
-    }}
-}
-
-
-fn
-print_int(i,f,x,y,w,pixel)
-{
-    if i == 0
-    {
-      f('0',x,y,pixel);
-
-      return;
-    }
-
-
-    while i
-    {
-      f('0'+(i%10),x,y,pixel);
-
-      x -=  w;
-      i /= 10;
-    }
-}
-
-
-fn
-print8_unicode(u,x,y,pixel)
-{
-  var  ptr = FONT8_START+(8*u);
-
-    for y_off in 8
-    {
-      var  bits = ptr.u8ref;
-                  ptr += 1;
-
-        for x_off in 8
-        {
-            if bits&0x80
-            {
-              dot(x+x_off,y+y_off,pixel);
-            }
-
-
-          bits <<= 1;
-        }
-    }
-}
-
-
-fn
-print14_unicode(u,x,y,pixel)
-{
-  var  ptr = FONT14_START+(2*14*u);
-
-    for y_off in 14
-    {
-      var  bits = ptr.u16ref;
-                  ptr += 2;
-
-        for x_off in 14
-        {
-            if bits&0x8000
-            {
-              dot(x+x_off,y+y_off,pixel);
-            }
-
-
-          bits <<= 1;
-        }
-    }
-}
-
-
-fn
-print14_unicode_s(s,x,y,pixel)
-{
-    loop
-    {
-      var  u = s.u16ref;
-               s += 2;
-
-        if u == 0
-        {
-          break;
-        }
-
-
-      print14_unicode(u,x,y,pixel);
-
-      x += 16;
-    }
-}
-
-
-fn
-fill(x,y,w,h,pixel)
-{
-  var  base_ptr = screen_address+(4*VIDEO_W*y)+(4*x);
-
-    for y_off in h
-    {
-      var  ptr = base_ptr             ;
-                 base_ptr += 4*VIDEO_W;
-
-        for x_off in w
-        {
-          ptr.u32ref = pixel;
-
-          ptr += 4;
-        }
-    }
-}
 
 
 const
@@ -397,18 +186,6 @@ pieces[PIECE_SIZE*PIECE_SIZE*80]: u8{
 
 };
 
-
-const
-WHITE = 0xFFFFFFFF;
-
-const
-BLUE = 0x00FF0000;
-
-const
-GREEN = 0x000FF00;
-
-const
-LGREEN = 0x003FFF3F;
 
 const
 TABLE_SIZE = 16;
@@ -715,8 +492,6 @@ flip()
 }
 
 
-static g_key_lock;
-
 fn
 process_input()
 {
@@ -828,6 +603,7 @@ process_input()
         if flag
         {
           draw_table();
+print8_unicode_s(u16"あいうえお".ptr,0,SCREEN_H-16,0xFFFFFFFF);
         }
     }
 }
@@ -855,6 +631,395 @@ init()
 }
 
 
+static
+g_last;
+
+
+static
+g_frame_counter;
+
+static
+g_flag;
+
+
+static  g_char_x_pointer;
+static  g_char_y_pointer;
+
+static  g_char_prev_x_pointer;
+static  g_char_prev_y_pointer;
+
+
+const
+CHAR_TABLE_W = 20;
+
+const
+CHAR_TABLE_H = 9;
+
+static
+g_char_table[CHAR_TABLE_H]: i64{
+  u16"　あ　い　う　え　お　ぁ　ぃ　ぅ　ぇ　ぉ".ptr,
+  u16"　か　き　く　け　こ　は　ひ　ふ　へ　ほ".ptr,
+  u16"　さ　し　す　せ　そ　ま　み　む　め　も".ptr,
+  u16"　た　ち　つ　て　と　や　ゆ　よ　わ　を".ptr,
+  u16"　な　に　ぬ　ね　の　ゃ　ゅ　ょ　っ　ん".ptr,
+  u16"　　　　　　　　　　　　　　　　　　　　".ptr,
+  u16"　が　ぎ　ぐ　げ　ご　ば　び　ぶ　べ　ぼ".ptr,
+  u16"　ざ　じ　ず　ぜ　ぞ　ぱ　ぴ　ぷ　ぺ　ぽ".ptr,
+  u16"　だ　ぢ　づ　で　ど　←　→　Ｅ　Ｎ　Ｄ".ptr,
+
+};
+
+
+const
+NAME_LENGTH = 4;
+
+static
+g_name[NAME_LENGTH]: u16{'　','　','　','　'};
+
+
+static
+g_name_pointer;
+
+
+static
+g_key_lock;
+
+
+static
+g_next_time;
+
+
+static
+g_phase;
+
+
+static
+g_kill_you;
+
+
+fn
+check()
+{
+   return (g_name[0] == 'ほ')
+       && (g_name[1] == 'も')
+       && (g_name[2] == '　')
+       && (g_name[3] == '　');
+}
+
+
+fn
+advance()
+{
+    if g_name_pointer < (NAME_LENGTH-1)
+    {
+      g_name_pointer += 1;
+    }
+}
+
+
+fn
+end_update()
+{
+    if g_phase == 1
+    {
+        if g_frame_counter >= 120
+        {
+          g_phase = 2;
+
+          scene_is_modified = 1;
+        }
+    }
+}
+
+
+fn
+end_draw()
+{
+    if g_phase == 0
+    {
+      fill(0,0,SCREEN_W,SCREEN_H,BLACK);
+
+      print14_unicode_s(u16"えらいっ".ptr,16*6,16*8,WHITE);
+
+      print14_unicode('完',SCREEN_W-32,SCREEN_H-32,WHITE);
+
+      g_phase = 1;
+      g_frame_counter = 0;
+
+      screen_status = 1;
+    }
+
+  else
+    if g_phase == 2
+    {
+      fill(0,0,SCREEN_W,SCREEN_H,BLACK);
+
+      print14_unicode_s(u16"こんな　ぷろぐらむに　まじに".ptr,16*6,16*8,WHITE);
+      print14_unicode_s(u16"なっちゃって　どうするの".ptr,16*6,16*9,WHITE);
+
+      screen_status = 1;
+    }
+}
+
+
+fn
+honhe_update()
+{
+  var  key_state = sys.input();
+
+    if key_state
+    {
+        if g_key_lock
+        {
+          return;
+        }
+
+
+      var  now = sys.timer();
+
+        if now < g_next_time
+        {
+          return;
+        }
+
+
+      g_next_time = now+200;
+
+        if key_state&Z_KEY
+        {
+          var  c = g_char_table[g_char_y_pointer].u16ref[g_char_x_pointer+1];
+
+            if c == '←'
+            {
+                if g_name_pointer
+                {
+                  g_name_pointer -= 1;
+                }
+            }
+
+          else
+            if c == '→'
+            {
+              advance();
+            }
+
+          else
+            if (c == 'Ｅ')
+            || (c == 'Ｎ')
+            || (c == 'Ｄ')
+            {
+                if check()
+                {
+                  scene_push(end_update,end_draw);
+
+                  g_phase = 0;
+                }
+
+              else
+                {
+                  g_kill_you = 1;
+
+                  scene_is_modified = true;
+                }
+            }
+
+          else
+            {
+              g_name[g_name_pointer] = c;
+
+              advance();
+            }
+
+
+          scene_is_modified = true;
+        }
+
+
+        if key_state&LEFT_KEY
+        {
+            if g_kill_you == 1
+            {
+              g_kill_you = 2;
+
+              scene_is_modified = true;
+            }
+
+
+            if g_char_x_pointer
+            {
+              g_char_x_pointer -= 2;
+
+              scene_is_modified = true;
+            }
+        }
+
+      else
+        if key_state&RIGHT_KEY
+        {
+            if g_kill_you == 1
+            {
+              g_kill_you = 2;
+
+              scene_is_modified = true;
+            }
+
+
+            if g_char_x_pointer < (CHAR_TABLE_W-2)
+            {
+              g_char_x_pointer += 2;
+
+              scene_is_modified = true;
+            }
+        }
+
+
+        if key_state&UP_KEY
+        {
+            if g_kill_you == 1
+            {
+              g_kill_you = 2;
+
+              scene_is_modified = true;
+            }
+
+
+            if g_char_y_pointer
+            {
+              g_char_y_pointer -= 1;
+
+              scene_is_modified = true;
+            }
+        }
+
+      else
+        if key_state&DOWN_KEY
+        {
+            if g_kill_you == 1
+            {
+              g_kill_you = 2;
+
+              scene_is_modified = true;
+            }
+
+
+            if g_char_y_pointer < (CHAR_TABLE_H-1)
+            {
+              g_char_y_pointer += 1;
+
+              scene_is_modified = true;
+            }
+        }
+    }
+
+  else
+    {
+      g_key_lock = 0;
+    }
+}
+
+
+fn
+honhe_draw()
+{
+  const  table_disp_x = 16*2;
+  const  table_disp_y = 16*8;
+
+    if g_phase == 0
+    {
+      fill(0,0,SCREEN_W,SCREEN_H,BLACK);
+
+        for i in CHAR_TABLE_H
+        {
+          print14_unicode_s(g_char_table[i],table_disp_x,table_disp_y+(16*i),WHITE);
+        }
+
+
+      g_phase = 1;
+    }
+
+
+  const  name_disp_x = 16*8;
+  const  name_disp_y = 16*3;
+
+    if g_kill_you == 1
+    {
+      print8_unicode_s(u16"＜考慮してへんやんけ　頃すぞ".ptr,0,0,WHITE);
+    }
+
+  else
+    if g_kill_you == 2
+    {
+      fill(0,0,8*14,16,BLACK);
+
+      g_kill_you = 0;
+    }
+
+
+  fill(table_disp_x+(16*g_char_prev_x_pointer),
+       table_disp_y+(16*g_char_prev_y_pointer),16,16,BLACK);
+
+  g_char_prev_x_pointer = g_char_x_pointer;
+  g_char_prev_y_pointer = g_char_y_pointer;
+
+  print14_unicode('→',table_disp_x+(16*g_char_x_pointer),
+                       table_disp_y+(16*g_char_y_pointer),WHITE);
+
+    for i in NAME_LENGTH
+    {
+      fill(name_disp_x+(16*i),name_disp_y,16,16,BLACK);
+
+      print14_unicode(g_name[i],name_disp_x+(16*i),name_disp_y,WHITE);
+    }
+
+
+  print14_unicode('＿',name_disp_x+(16*g_name_pointer),
+                       name_disp_y,WHITE);
+
+  screen_status = 1;
+}
+
+
+fn
+start_update()
+{
+    if sys.input()&Z_KEY
+    {
+      scene_push(honhe_update,honhe_draw);
+
+      g_key_lock = 1;
+    }
+
+  else
+    {
+      var  now = sys.timer();
+
+        if now > (g_last+80)
+        {
+          g_last = now;
+
+          scene_is_modified = true;
+        }
+    }
+}
+
+
+fn
+start_draw()
+{
+  fill(0,0,SCREEN_W,SCREEN_H,BLACK);
+
+  print14_unicode_s(u16"入力速度を考慮せよ！".ptr,SCREEN_W/2-(16*5),SCREEN_H/2-(16*4),WHITE);
+
+    if (g_frame_counter>>2)&1
+    {
+      print8_unicode_s(u16"PUSH Z BUTTON".ptr,SCREEN_W/2-(8*6),SCREEN_H/2,WHITE);
+    }
+
+
+  screen_status = 1;
+}
+
+
 fn
 main()
 {
@@ -875,46 +1040,19 @@ main()
 
   g_number_of_pieces = n;
 
-    for ii in i
-    {
-      draw(ii,ii,0);
-    }
-
-
-  draw(i  ,0,1);
-  draw(i+4,0,2);
-
-  draw(i+1  ,2,1);
-  draw(i+1+4,1,1);
-  draw(i+3  ,1,2);
-  draw(i+3+4,2,2);
-
-  draw(i+2  ,3,2);
-  draw(i+2+4,3,1);
-
-//  init();
-
-  draw_table();
-
     for i in g_number_of_pieces
     {
       codes[i] = get_code(i);
     }
 
 
-  var  last;
+  scene_push(start_update,start_draw);
 
     loop
     {
-      var  now = sys.timer();
+      scene_move();
 
-        if now > (last+80)
-        {
-          last = now;
-
-          process_input();
-        }
-
+      g_frame_counter += 1;
 
       halt;
     }

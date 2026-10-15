@@ -1,7 +1,11 @@
 /* tslint:disable */
 /* eslint-disable */
 
-export function compile(s: string): boolean;
+export function add_source(name: string, s: string): boolean;
+
+export function clear(): void;
+
+export function compile(): boolean;
 
 export function get_byte(off: number): number;
 
@@ -13,6 +17,8 @@ export function get_error_message(): string;
 
 export function get_input(): number;
 
+export function get_u16(off: number): number;
+
 export function get_word_hi(off: number): number;
 
 export function get_word_lo(off: number): number;
@@ -21,13 +27,13 @@ export function process(freq: number, tm: number): void;
 
 export function put_byte(off: number, v: number): void;
 
+export function put_u16(off: number, v: number): void;
+
 export function put_word(off: number, hi: number, lo: number): void;
 
 export function set_input(v: number): void;
 
 export function setup(): string;
-
-export function transfer_ex_img(w: number, h: number, data: Uint8Array): void;
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
@@ -35,6 +41,8 @@ export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly get_byte: (a: number) => number;
     readonly put_byte: (a: number, b: number) => void;
+    readonly get_u16: (a: number) => number;
+    readonly put_u16: (a: number, b: number) => void;
     readonly get_word_hi: (a: number) => number;
     readonly get_word_lo: (a: number) => number;
     readonly put_word: (a: number, b: number, c: number) => void;
@@ -44,8 +52,9 @@ export interface InitOutput {
     readonly get_const: (a: number, b: number) => number;
     readonly process: (a: number, b: number) => void;
     readonly get_error_message: () => [number, number];
-    readonly transfer_ex_img: (a: number, b: number, c: number, d: number) => void;
-    readonly compile: (a: number, b: number) => number;
+    readonly add_source: (a: number, b: number, c: number, d: number) => number;
+    readonly clear: () => void;
+    readonly compile: () => number;
     readonly setup: () => [number, number];
     readonly __wbindgen_externrefs: WebAssembly.Table;
     readonly __wbindgen_malloc: (a: number, b: number) => number;

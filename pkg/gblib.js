@@ -1,13 +1,28 @@
 /* @ts-self-types="./gblib.d.ts" */
 
 /**
+ * @param {string} name
  * @param {string} s
  * @returns {boolean}
  */
-export function compile(s) {
-    const ptr0 = passStringToWasm0(s, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+export function add_source(name, s) {
+    const ptr0 = passStringToWasm0(name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.compile(ptr0, len0);
+    const ptr1 = passStringToWasm0(s, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.add_source(ptr0, len0, ptr1, len1);
+    return ret !== 0;
+}
+
+export function clear() {
+    wasm.clear();
+}
+
+/**
+ * @returns {boolean}
+ */
+export function compile() {
+    const ret = wasm.compile();
     return ret !== 0;
 }
 
@@ -70,6 +85,15 @@ export function get_input() {
  * @param {number} off
  * @returns {number}
  */
+export function get_u16(off) {
+    const ret = wasm.get_u16(off);
+    return ret;
+}
+
+/**
+ * @param {number} off
+ * @returns {number}
+ */
 export function get_word_hi(off) {
     const ret = wasm.get_word_hi(off);
     return ret >>> 0;
@@ -98,6 +122,14 @@ export function process(freq, tm) {
  */
 export function put_byte(off, v) {
     wasm.put_byte(off, v);
+}
+
+/**
+ * @param {number} off
+ * @param {number} v
+ */
+export function put_u16(off, v) {
+    wasm.put_u16(off, v);
 }
 
 /**
@@ -131,17 +163,6 @@ export function setup() {
         wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
     }
 }
-
-/**
- * @param {number} w
- * @param {number} h
- * @param {Uint8Array} data
- */
-export function transfer_ex_img(w, h, data) {
-    const ptr0 = passArray8ToWasm0(data, wasm.__wbindgen_malloc);
-    const len0 = WASM_VECTOR_LEN;
-    wasm.transfer_ex_img(w, h, ptr0, len0);
-}
 function __wbg_get_imports() {
     const import0 = {
         __proto__: null,
@@ -171,13 +192,6 @@ function getUint8ArrayMemory0() {
         cachedUint8ArrayMemory0 = new Uint8Array(wasm.memory.buffer);
     }
     return cachedUint8ArrayMemory0;
-}
-
-function passArray8ToWasm0(arg, malloc) {
-    const ptr = malloc(arg.length * 1, 1) >>> 0;
-    getUint8ArrayMemory0().set(arg, ptr / 1);
-    WASM_VECTOR_LEN = arg.length;
-    return ptr;
 }
 
 function passStringToWasm0(arg, malloc, realloc) {
